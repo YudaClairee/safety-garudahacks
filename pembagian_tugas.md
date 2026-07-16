@@ -39,9 +39,9 @@ Beri tanda `[x]` pada kotak jika tugas telah diselesaikan.
   - [x] Ambil dan tampilkan data dari tabel `csr_programs`.
   - [x] Tampilkan UI metrik/KPI: Sisa _Budget_ Rupiah dan Total Tugas yang didanai.
   - [x] Tabel log tugas yang memperlihatkan laporan warga.
-- [ ] **Simulasi Otomasi Webhook:**
-  - [ ] Buat endpoint API `/api/trigger-automation`.
-  - [ ] Logika API: Ubah status laporan _Pending_ jadi _Approved_ -> Tambah poin warga -> Kurangi budget CSR.
+- [x] **Simulasi Otomasi Webhook:**
+  - [x] Buat endpoint API `/api/trigger-automation`.
+  - [x] Logika API: Ubah status laporan *Pending* jadi *Approved* -> Tambah poin warga -> Kurangi budget CSR.
 
 ---
 
