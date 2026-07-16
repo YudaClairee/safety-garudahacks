@@ -33,6 +33,15 @@ const DashboardWargaRoute = DashboardWargaRouteImport.update({
   id: '/warga',
   path: '/warga',
   getParentRoute: () => DashboardRoute,
+const DashboardCorporateRoute = DashboardCorporateRouteImport.update({
+  id: '/dashboard/corporate',
+  path: '/dashboard/corporate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTriggerAutomationRoute = ApiTriggerAutomationRouteImport.update({
+  id: '/api/trigger-automation',
+  path: '/api/trigger-automation',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -46,6 +55,13 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/dashboard/warga': typeof DashboardWargaRoute
+  '/api/trigger-automation': typeof ApiTriggerAutomationRoute
+  '/dashboard/corporate': typeof DashboardCorporateRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/api/trigger-automation': typeof ApiTriggerAutomationRoute
+  '/dashboard/corporate': typeof DashboardCorporateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -60,12 +76,23 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/dashboard' | '/login' | '/dashboard/warga'
   id: '__root__' | '/' | '/dashboard' | '/login' | '/dashboard/warga'
+  '/api/trigger-automation': typeof ApiTriggerAutomationRoute
+  '/dashboard/corporate': typeof DashboardCorporateRoute
+}
+export interface FileRouteTypes {
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: '/' | '/api/trigger-automation' | '/dashboard/corporate'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/api/trigger-automation' | '/dashboard/corporate'
+  id: '__root__' | '/' | '/api/trigger-automation' | '/dashboard/corporate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiTriggerAutomationRoute: typeof ApiTriggerAutomationRoute
+  DashboardCorporateRoute: typeof DashboardCorporateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -97,6 +124,19 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/warga'
       preLoaderRoute: typeof DashboardWargaRouteImport
       parentRoute: typeof DashboardRoute
+    '/dashboard/corporate': {
+      id: '/dashboard/corporate'
+      path: '/dashboard/corporate'
+      fullPath: '/dashboard/corporate'
+      preLoaderRoute: typeof DashboardCorporateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/trigger-automation': {
+      id: '/api/trigger-automation'
+      path: '/api/trigger-automation'
+      fullPath: '/api/trigger-automation'
+      preLoaderRoute: typeof ApiTriggerAutomationRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -117,6 +157,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiTriggerAutomationRoute: ApiTriggerAutomationRoute,
+  DashboardCorporateRoute: DashboardCorporateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

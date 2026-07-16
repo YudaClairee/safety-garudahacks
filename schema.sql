@@ -56,6 +56,7 @@ CREATE TABLE public.csr_programs (
 ALTER TABLE public.csr_programs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "CSR Programs are viewable by everyone." ON public.csr_programs FOR SELECT USING (true);
 CREATE POLICY "CSR Programs can be updated by anyone (Hackathon MVP)" ON public.csr_programs FOR UPDATE USING (true);
+CREATE POLICY "CSR Programs can be inserted by anyone (Hackathon MVP)" ON public.csr_programs FOR INSERT WITH CHECK (true);
 
 -- 4. Dummy Data Perusahaan CSR
 INSERT INTO public.csr_programs (company_name, budget_rupiah, tasks_funded)

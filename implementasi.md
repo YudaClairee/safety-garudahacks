@@ -3,11 +3,12 @@
 Dokumen ini berisi langkah-langkah implementasi teknis yang sangat detail dari awal hingga akhir untuk membangun MVP WaktuJaga dalam batasan waktu 18 jam (Hackathon).
 
 ## Ringkasan Tech Stack
-*   **Framework:** TanStack Start (dengan React)
-*   **Routing:** TanStack Router (terbawa otomatis di TanStack Start)
-*   **Data Fetching & State:** TanStack Query
-*   **Styling & UI:** Tailwind CSS + Radix UI (menggunakan generator komponen seperti shadcn/ui untuk mempercepat styling)
-*   **Database, Auth & Storage:** Supabase (PostgreSQL)
+
+- **Framework:** TanStack Start (dengan React)
+- **Routing:** TanStack Router (terbawa otomatis di TanStack Start)
+- **Data Fetching & State:** TanStack Query
+- **Styling & UI:** Tailwind CSS + Radix UI (menggunakan generator komponen seperti shadcn/ui untuk mempercepat styling)
+- **Database, Auth & Storage:** Supabase (PostgreSQL)
 
 ---
 
@@ -16,15 +17,18 @@ Dokumen ini berisi langkah-langkah implementasi teknis yang sangat detail dari a
 Sebelum menulis kode frontend, kita harus menyiapkan backend di Supabase.
 
 ### 1.1 Buat Project & Auth
+
 1. Buka [Supabase Dashboard](https://supabase.com/dashboard) dan buat project baru.
 2. Ke menu **Authentication -> Providers**, pastikan **Email** enabled (default).
 3. Matikan "Confirm email" sementara untuk mempermudah testing saat hackathon.
 
 ### 1.2 Setup Storage (Untuk Foto Tugas)
+
 1. Ke menu **Storage**, buat bucket baru bernama `task-photos`.
 2. Buat bucket menjadi **Public** agar foto mudah diakses melalui URL.
 
 ### 1.3 Schema Database & Table
+
 Buka menu **SQL Editor** di Supabase dan jalankan script ini untuk membuat tabel:
 
 ```sql
@@ -70,8 +74,8 @@ ALTER TABLE public.tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.csr_programs DISABLE ROW LEVEL SECURITY;
 
 -- 6. Masukkan Dummy Data CSR Programs
-INSERT INTO public.csr_programs (company_name, program_title, total_budget) 
-VALUES 
+INSERT INTO public.csr_programs (company_name, program_title, total_budget)
+VALUES
 ('PT Garuda Nusantara', 'Bakti Lingkungan Jakarta', 50000000),
 ('Bank BCA', 'Pelatihan Digital Desa', 25000000);
 ```
@@ -89,7 +93,7 @@ npm create @tanstack/start@latest .
 # - Pilih bundler "Vite"
 ```
 
-Masuk ke folder project dan install *dependencies*:
+Masuk ke folder project dan install _dependencies_:
 
 ```bash
 npm install @supabase/supabase-js @tanstack/react-query lucide-react
@@ -98,6 +102,7 @@ npx tailwindcss init -p
 ```
 
 Inisialisasi `shadcn/ui` (Radix UI + Tailwind wrapper):
+
 ```bash
 npx shadcn-ui@latest init
 # Pilih gaya Default/New York dan warna base favorit.
@@ -111,21 +116,25 @@ npx shadcn-ui@latest add button card input label select table toast form
 ## Langkah 3: Setup Konfigurasi Klien (Supabase & Query)
 
 ### 3.1 `.env.local`
+
 Buat file env di root project:
+
 ```env
 VITE_SUPABASE_URL=https://[PROJECT-ID].supabase.co
 VITE_SUPABASE_ANON_KEY=[YOUR-ANON-KEY]
 ```
 
 ### 3.2 `src/lib/supabase.ts`
+
 Buat file ini untuk menghubungkan aplikasi ke Supabase:
+
 ```typescript
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 ```
 
 ---
@@ -143,11 +152,12 @@ Menggunakan TanStack Router, struktur file di dalam folder `src/routes/` akan te
 
 **Logika Halaman Login (`/login`)**:
 Buat form sederhana (Email & Password). Gunakan fungsi Supabase:
+
 ```typescript
 const { data, error } = await supabase.auth.signInWithPassword({
   email,
-  password
-});
+  password,
+})
 ```
 
 ---
@@ -157,37 +167,51 @@ const { data, error } = await supabase.auth.signInWithPassword({
 Berada di route `dashboard/warga.tsx`.
 
 ### 5.1 Fetching Saldo & Daftar Program CSR (TanStack Query)
+
 Gunakan `useQuery` untuk mengambil saldo Warga dan daftar program CSR yang tersedia.
+
 ```typescript
 const { data: userProfile } = useQuery({
   queryKey: ['userProfile', userId],
   queryFn: async () => {
-    const { data } = await supabase.from('users').select('*').eq('id', userId).single();
-    return data;
-  }
-});
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    return data
+  },
+})
 
 const { data: csrPrograms } = useQuery({
   queryKey: ['csrPrograms'],
   queryFn: async () => {
-    const { data } = await supabase.from('csr_programs').select('*').eq('is_active', true);
-    return data;
-  }
-});
+    const { data } = await supabase
+      .from('csr_programs')
+      .select('*')
+      .eq('is_active', true)
+    return data
+  },
+})
 ```
-// Tampilkan Saldo dalam bentuk "Poin Kebaikan" (bukan Rupiah), misalnya: "Saldo Anda: 25.000 Poin". 
+
+// Tampilkan Saldo dalam bentuk "Poin Kebaikan" (bukan Rupiah), misalnya: "Saldo Anda: 25.000 Poin".
 // Lalu tampilkan daftar Program CSR dalam bentuk Card. Warga bisa menekan tombol "Kerjakan Tugas" pada salah satu program.
 
 ### 5.2 Fitur Tukar Poin (Redeem - Dummy UI)
+
 Tambahkan satu seksi di bawah saldo untuk menukarkan poin dengan kebutuhan pokok (Sembako, Token Listrik, BPJS).
 Gunakan komponen Card dari shadcn/ui untuk menampilkan opsi statis:
+
 - 🌾 Paket Sembako (Tukar 50.000 Poin)
 - ⚡ Token Listrik PLN (Tukar 20.000 Poin)
 - 🏥 Bayar Premi BPJS (Tukar 35.000 Poin)
 
 ### 5.3 Form Submit Tugas & Upload Foto
+
 Buat form menggunakan komponen shadcn/ui. Form ini akan mengirimkan `program_id` berdasarkan program CSR yang dipilih.
 Opsi `task_type` yang valid (gunakan komponen `Select`):
+
 - Membersihkan Lingkungan
 - Mengajar
 - Daur Ulang
@@ -198,14 +222,19 @@ Opsi `task_type` yang valid (gunakan komponen `Select`):
 
 **Logika Upload Foto:**
 Saat user klik submit form (memilih file gambar):
+
 ```typescript
 // 1. Upload ke Storage
-const fileExt = file.name.split('.').pop();
-const fileName = `${Math.random()}.${fileExt}`;
-const { data: uploadData } = await supabase.storage.from('task-photos').upload(fileName, file);
+const fileExt = file.name.split('.').pop()
+const fileName = `${Math.random()}.${fileExt}`
+const { data: uploadData } = await supabase.storage
+  .from('task-photos')
+  .upload(fileName, file)
 
 // Dapatkan Public URL
-const { data: publicUrlData } = supabase.storage.from('task-photos').getPublicUrl(fileName);
+const { data: publicUrlData } = supabase.storage
+  .from('task-photos')
+  .getPublicUrl(fileName)
 
 // 2. Insert Data Task ke Database
 const { error } = await supabase.from('tasks').insert({
@@ -214,10 +243,11 @@ const { error } = await supabase.from('tasks').insert({
   task_type: selectedTask,
   hours_spent: hoursInput,
   photo_url: publicUrlData.publicUrl,
-  status: 'pending' // Akan diproses oleh otomasi
-});
+  status: 'pending', // Akan diproses oleh otomasi
+})
 ```
-Gunakan TanStack Query `useMutation` untuk memutar status *loading* form.
+
+Gunakan TanStack Query `useMutation` untuk memutar status _loading_ form.
 
 ---
 
@@ -226,6 +256,7 @@ Gunakan TanStack Query `useMutation` untuk memutar status *loading* form.
 Sesuai "Golden Flow" untuk menggantikan n8n/Make.com, buat endpoint di `src/routes/api/trigger-automation.ts`.
 
 API Route ini melakukan transaksi:
+
 1. `SELECT * FROM tasks WHERE status = 'pending'`
 2. Loop semua tugas pending:
    - Hitung `credit = hours_spent * 25000`
@@ -240,14 +271,18 @@ API Route ini melakukan transaksi:
 Berada di route `dashboard/corporate.tsx`.
 
 ### 7.1 Fetching KPI Metrics
+
 Gunakan `useQuery` untuk mengambil baris data dari `csr_programs` milik perusahaan yang login (untuk MVP, bisa tampilkan semua):
+
 - Tampilkan nama program dan total budget (misal Rp 50.000.000).
 - Tampilkan total dana tersalurkan (`funds_disbursed`).
 - Sisa budget = budget - disbursed.
 
 ### 7.2 Log Aktivitas (Tabel)
+
 Gunakan komponen Table shadcn/ui.
 Gunakan `useQuery` untuk join data:
+
 ```typescript
 const { data: taskLog } = useQuery({
   queryKey: ['corporateTasks'],
@@ -255,14 +290,16 @@ const { data: taskLog } = useQuery({
     // Join dengan tabel users untuk mendapatkan nama
     const { data } = await supabase
       .from('tasks')
-      .select(`
+      .select(
+        `
         id, task_type, hours_spent, status, photo_url, credit_earned, created_at,
         users ( full_name )
-      `)
-      .order('created_at', { ascending: false });
-    return data;
-  }
-});
+      `,
+      )
+      .order('created_at', { ascending: false })
+    return data
+  },
+})
 ```
 
-Tampilkan list tugas dari berbagai warga (menunjukkan *impact* CSR ke korporat).
+Tampilkan list tugas dari berbagai warga (menunjukkan _impact_ CSR ke korporat).
