@@ -1,16 +1,41 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { supabase } from '@/lib/supabase'
 
-export const Route = createFileRoute('/dashboard')({ component: DashboardPage })
+export const Route = createFileRoute('/dashboard')({
+  beforeLoad: async ({ location }) => {
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      throw redirect({
+        to: '/login',
+        search: {
+          redirect: location.href,
+        },
+      })
+    }
+
+    // If accessing exactly /dashboard, redirect to the correct sub-route based on role
+    if (location.pathname === '/dashboard' || location.pathname === '/dashboard/') {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', session.user.id)
+        .single()
+      
+      if (error) {
+        console.error('Error fetching user role:', error)
+      }
+
+      if (user?.role === 'corporate') {
+        throw redirect({ to: '/dashboard/corporate' })
+      } else {
+        throw redirect({ to: '/dashboard/warga' })
+      }
+    }
+  },
+  component: DashboardPage,
+})
 
 function DashboardPage() {
-  return (
-    <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-3xl rounded-3xl border border-border bg-card/80 p-10 shadow-lg shadow-black/5 backdrop-blur-xl">
-        <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Anda sudah masuk. Silakan tambahkan konten dashboard di sini.
-        </p>
-      </div>
-    </main>
-  )
+  return <Outlet />
 }

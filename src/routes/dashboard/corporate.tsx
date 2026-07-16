@@ -1,16 +1,16 @@
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { CSRProgram } from '../../lib/types'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Building2,
   Wallet,
   Target,
   Activity,
   ArrowUpRight,
   LogOut,
   X,
+  Sparkles,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/dashboard/corporate')({
@@ -40,6 +40,33 @@ export const Route = createFileRoute('/dashboard/corporate')({
 function CorporateDashboard() {
   const { programs, tasks } = Route.useLoaderData()
   const router = useRouter()
+
+  const [isSimulating, setIsSimulating] = useState(false)
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.navigate({ to: '/login' })
+  }
+
+  async function handleTriggerAutomation() {
+    setIsSimulating(true)
+    try {
+      const res = await fetch('/api/trigger-automation', {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert(`Simulasi Webhook sukses! ${data.message || ''}\nJumlah tugas diproses: ${data.processedCount || 0}`)
+        router.invalidate() // Refetch data
+      } else {
+        alert(`Gagal menjalankan simulasi: ${data.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      alert(`Terjadi kesalahan: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setIsSimulating(false)
+    }
+  }
 
   // Form states
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -130,39 +157,37 @@ function CorporateDashboard() {
         staggerChildren: 0.05,
       },
     },
-  }
+  } as const
 
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     show: {
       opacity: 1,
       y: 0,
-      transition: { type: 'spring', stiffness: 300, damping: 24 },
+      transition: { type: 'spring' as const, stiffness: 300, damping: 24 },
     },
-  }
+  } as const
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-[oklch(0.36_0.16_250)] selection:text-white">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-primary selection:text-white">
       {/* Navbar / Header */}
       <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[oklch(0.36_0.16_250)] text-white shadow-sm">
-                <Building2 className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-[oklch(0.36_0.16_250)]">
+              <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-10 w-auto object-contain" />
+              <span className="text-xl font-bold tracking-tight text-primary">
                 Jalan Corporate
               </span>
             </div>
             <div className="flex items-center gap-4 text-sm font-medium text-slate-600">
-              <Link
-                to="/"
-                className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-slate-700 transition-colors hover:bg-slate-200"
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-slate-700 transition-colors hover:bg-slate-200 cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Keluar</span>
-              </Link>
+              </button>
               <div className="h-8 w-8 rounded-full bg-slate-200" />
             </div>
           </div>
@@ -177,13 +202,29 @@ function CorporateDashboard() {
           className="space-y-8"
         >
           {/* Header */}
-          <motion.div variants={itemVariants} className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Dashboard CSR
-            </h1>
-            <p className="text-slate-500">
-              Pantau alokasi dana dan program relawan yang sedang berjalan.
-            </p>
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Dashboard CSR
+              </h1>
+              <p className="text-slate-500 mt-1">
+                Pantau alokasi dana dan program relawan yang sedang berjalan.
+              </p>
+            </div>
+            <button
+              onClick={handleTriggerAutomation}
+              disabled={isSimulating}
+              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-white shadow-md hover:bg-amber-600 transition-colors disabled:opacity-50 cursor-pointer w-fit"
+            >
+              {isSimulating ? (
+                <span>Memproses Simulasi...</span>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  <span>Simulasi Webhook Otomasi</span>
+                </>
+              )}
+            </button>
           </motion.div>
 
           {/* Metrics Grid */}
@@ -192,9 +233,9 @@ function CorporateDashboard() {
               variants={itemVariants}
               className="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition-all hover:shadow-md"
             >
-              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[oklch(0.36_0.16_250)]/5 transition-transform group-hover:scale-150" />
+              <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/5 transition-transform group-hover:scale-150" />
               <div className="relative">
-                <div className="flex items-center gap-3 text-[oklch(0.36_0.16_250)]">
+                <div className="flex items-center gap-3 text-primary">
                   <Wallet className="h-5 w-5" />
                   <h3 className="text-sm font-medium">Total Anggaran CSR</h3>
                 </div>
@@ -250,7 +291,7 @@ function CorporateDashboard() {
 
             <motion.div
               variants={itemVariants}
-              className="group relative overflow-hidden rounded-3xl bg-[oklch(0.36_0.16_250)] p-6 text-white shadow-sm transition-all hover:shadow-md"
+              className="group relative overflow-hidden rounded-3xl bg-primary p-6 text-white shadow-sm transition-all hover:shadow-md"
             >
               <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 transition-transform group-hover:scale-150" />
               <div className="relative h-full flex flex-col justify-between">
@@ -376,7 +417,7 @@ function CorporateDashboard() {
                           <span className="font-semibold text-slate-900">
                             {program.company_name}
                           </span>
-                          <span className="font-semibold text-[oklch(0.36_0.16_250)] text-sm">
+                          <span className="font-semibold text-primary text-sm">
                             {formatCurrency(program.budget_rupiah)}
                           </span>
                         </div>
@@ -440,7 +481,7 @@ function CorporateDashboard() {
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="e.g. PT Garuda Nusantara"
-                    className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-[oklch(0.36_0.16_250)] focus:outline-none transition-all"
+                    className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                   />
                   {errors.companyName && (
                     <p className="mt-1 text-xs text-red-600">
@@ -462,7 +503,7 @@ function CorporateDashboard() {
                       value={budget}
                       onChange={(e) => setBudget(e.target.value)}
                       placeholder="e.g. 50000000"
-                      className="block w-full rounded-xl border border-slate-200 pl-10 pr-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-[oklch(0.36_0.16_250)] focus:outline-none transition-all"
+                      className="block w-full rounded-xl border border-slate-200 pl-10 pr-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     />
                   </div>
                   {errors.budget && (
@@ -479,7 +520,7 @@ function CorporateDashboard() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-xl bg-[oklch(0.36_0.16_250)] py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[oklch(0.36_0.16_250)] disabled:opacity-50 transition-opacity cursor-pointer mt-2"
+                  className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 transition-opacity cursor-pointer mt-2"
                 >
                   {isSubmitting ? 'Menyimpan...' : 'Daftarkan Program'}
                 </button>

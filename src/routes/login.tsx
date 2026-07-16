@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-
+import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/login')({ component: LoginPage })
 
 function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState<'warga' | 'corporate'>('warga')
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
@@ -23,13 +24,25 @@ function LoginPage() {
 
     try {
       if (mode === 'register') {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
         })
 
         if (signUpError) {
           throw signUpError
+        }
+
+        if (signUpData.user) {
+          // Update the public.users table with the selected role immediately after signup
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ role })
+            .eq('id', signUpData.user.id)
+          
+          if (updateError) {
+            console.error('Failed to set role:', updateError)
+          }
         }
       }
 
@@ -43,7 +56,7 @@ function LoginPage() {
       }
 
       setFeedback('Berhasil masuk. Mengarahkan ke dashboard...')
-      window.location.assign('/dashboard')
+      router.navigate({ to: '/dashboard' })
     } catch (err) {
       setError(
         err instanceof Error
@@ -58,11 +71,9 @@ function LoginPage() {
   return (
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card/80 p-8 shadow-lg shadow-black/5 backdrop-blur-xl">
-        <div className="mb-8 text-center">
-          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">
-            WaktuJaga
-          </p>
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-12 w-auto object-contain mb-2" />
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
             {mode === 'login' ? 'Masuk ke akun Anda' : 'Buat akun baru'}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -71,6 +82,38 @@ function LoginPage() {
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
+          {mode === 'register' && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">
+                Daftar Sebagai
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('warga')}
+                  className={`rounded-2xl border px-4 py-3 text-sm font-medium transition cursor-pointer ${
+                    role === 'warga'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-background hover:bg-muted text-muted-foreground'
+                  }`}
+                >
+                  Warga (Relawan)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('corporate')}
+                  className={`rounded-2xl border px-4 py-3 text-sm font-medium transition cursor-pointer ${
+                    role === 'corporate'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-background hover:bg-muted text-muted-foreground'
+                  }`}
+                >
+                  Perusahaan (CSR)
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="email">
               Email

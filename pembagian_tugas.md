@@ -8,19 +8,19 @@ Beri tanda `[x]` pada kotak jika tugas telah diselesaikan.
 **Area Kerja Utama:** `src/routes/login.tsx`, `src/routes/dashboard.tsx`, `src/routes/dashboard/warga.tsx`
 
 - [x] **Setup & Init (Bersama):** Push inisialisasi awal TanStack, Supabase, Tailwind, Shadcn ke GitHub.
-- [ ] **Database (Supabase):**
-  - [ ] Buat tabel `users` (id, email, role, poin)
-  - [ ] Buat tabel `tasks` (id, user_id, type, status, photo_url)
-  - [ ] Buat bucket storage `task_photos`
-- [ ] **Halaman Login (`/login`):**
-  - [ ] Implementasi form login dan register menggunakan `supabase.auth.signInWithPassword()`.
-  - [ ] Redirect ke dashboard setelah sukses login.
-- [ ] **Halaman Warga (`/dashboard/warga`):**
-  - [ ] UI Card saldo "Poin Kebaikan".
-  - [ ] Buat **Form Lapor Tugas** (Pilih 1 dari 7 kategori tugas).
-  - [ ] Logika _Upload Photo_ ke Supabase Storage.
-  - [ ] Tampilkan riwayat/status tugas yang telah dilaporkan (Pending / Approved).
-  - [ ] Tombol dummy "Tukar Poin".
+- [x] **Database (Supabase):**
+  - [x] Buat tabel `users` (id, email, role, poin)
+  - [x] Buat tabel `tasks` (id, user_id, type, status, photo_url)
+  - [x] Buat bucket storage `task_photos`
+- [x] **Halaman Login (`/login`):**
+  - [x] Implementasi form login dan register menggunakan `supabase.auth.signInWithPassword()`.
+  - [x] Redirect ke dashboard setelah sukses login.
+- [x] **Halaman Warga (`/dashboard/warga`):**
+  - [x] UI Card saldo "Poin Kebaikan".
+  - [x] Buat **Form Lapor Tugas** (Pilih 1 dari 7 kategori tugas).
+  - [x] Logika _Upload Photo_ ke Supabase Storage.
+  - [x] Tampilkan riwayat/status tugas yang telah dilaporkan (Pending / Approved).
+  - [x] Tombol dummy "Tukar Poin".
 
 ---
 
@@ -47,9 +47,9 @@ Beri tanda `[x]` pada kotak jika tugas telah diselesaikan.
 
 ## 🚀 Fase Penggabungan (Jam 16 - 18)
 
-- [ ] Gabungkan (merge) _branch_ Warga dan Corporate.
-- [ ] Lakukan tes alur _end-to-end_: (Warga upload foto -> Panggil webhook otomasi -> Cek apakah budget Corporate berkurang dan poin Warga bertambah).
-- [ ] Polish UI, perbaiki animasi, dan persiapan bahan presentasi/pitching.
+- [x] Gabungkan (merge) _branch_ Warga dan Corporate.
+- [x] Lakukan tes alur _end-to-end_: (Warga upload foto -> Panggil webhook otomasi -> Cek apakah budget Corporate berkurang dan poin Warga bertambah).
+- [x] Polish UI, perbaiki animasi, dan persiapan bahan presentasi/pitching.
 
 ### Pembagian Batch:
 

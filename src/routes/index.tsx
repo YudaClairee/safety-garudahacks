@@ -11,7 +11,6 @@ import {
   Coins,
   Building,
   Users,
-  Compass,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 
@@ -108,17 +107,17 @@ function Home() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link
             to="/"
-            className="flex items-center gap-2.5 font-semibold text-lg text-sky-900 dark:text-sky-400 tracking-tight"
+            className="flex items-center gap-2.5 tracking-tight"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-900 text-white dark:bg-sky-500">
-              <Compass className="h-5 w-5" />
-            </div>
-            <span>
-              Jalan{' '}
-              <span className="text-slate-400 font-normal">
-                | Jaringan Relawan
+            <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-10 w-auto object-contain" />
+            <div className="flex flex-col leading-tight">
+              <span className="font-bold text-lg text-sky-900 dark:text-sky-400">
+                Jalan
               </span>
-            </span>
+              <span className="text-[10px] text-slate-400 font-medium tracking-wide">
+                Jaringan Relawan
+              </span>
+            </div>
           </Link>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-650 dark:text-slate-350">
@@ -210,46 +209,47 @@ function Home() {
       </section>
 
       {/* Infinite Logo Marquee */}
+      {/* Infinite Logo Marquee */}
       <section className="border-y border-slate-200 bg-slate-100/50 py-10 dark:border-slate-800 dark:bg-slate-900/50 overflow-hidden">
         <div className="mx-auto max-w-7xl px-6">
           <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-6">
-            Dipercaya Oleh Mitra CSR Progresif
+            Pilar Fokus & Kategori Aksi Sponsor CSR Potensial
           </p>
           <div className="relative w-full overflow-hidden flex items-center">
             {/* Logo scroll track */}
             <div className="flex w-[200%] gap-12 animate-marquee shrink-0 items-center justify-around">
               <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
-                <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                PT BANGUN BANGSA
+                <ShieldCheck className="h-5 w-5 text-sky-900 dark:text-sky-400" />
+                PELESTARIAN LINGKUNGAN
+              </div>
+              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
+                <Users className="h-5 w-5 text-sky-900 dark:text-sky-400" />
+                PEMBERDAYAAN MASYARAKAT
+              </div>
+              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
+                <Sparkles className="h-5 w-5 text-sky-900 dark:text-sky-400" />
+                PENDIDIKAN SOSIAL ANAK
               </div>
               <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
                 <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                BANK KESEJAHTERAAN
-              </div>
-              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
-                <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                NUSANTARA ENERGY
-              </div>
-              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
-                <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                GARUDA LESTARI
+                BANTUAN FASILITAS UMUM
               </div>
               {/* Duplicate track for loop */}
               <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
-                <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                PT BANGUN BANGSA
+                <ShieldCheck className="h-5 w-5 text-sky-900 dark:text-sky-400" />
+                PELESTARIAN LINGKUNGAN
+              </div>
+              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
+                <Users className="h-5 w-5 text-sky-900 dark:text-sky-400" />
+                PEMBERDAYAAN MASYARAKAT
+              </div>
+              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
+                <Sparkles className="h-5 w-5 text-sky-900 dark:text-sky-400" />
+                PENDIDIKAN SOSIAL ANAK
               </div>
               <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
                 <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                BANK KESEJAHTERAAN
-              </div>
-              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
-                <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                NUSANTARA ENERGY
-              </div>
-              <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 font-bold tracking-tight text-sm">
-                <Building className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-                GARUDA LESTARI
+                BANTUAN FASILITAS UMUM
               </div>
             </div>
           </div>
@@ -290,38 +290,38 @@ function Home() {
               </div>
             </div>
 
-            {/* Small Metric Card */}
+            {/* Small Feature Card: Verification */}
             <div className="bento-card flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm relative overflow-hidden group">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Aktivitas Relawan
-                </span>
-                <Clock className="h-4 w-4 text-sky-900 dark:text-sky-400" />
-              </div>
-              <div>
-                <span className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                  1,240+
-                </span>
-                <p className="mt-2 text-xs text-slate-600 dark:text-slate-350">
-                  Jam kerja sosial telah tervalidasi
-                </p>
-              </div>
-            </div>
-
-            {/* Another Small Metric Card */}
-            <div className="bento-card flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm relative overflow-hidden group">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Efisiensi Audit
+                  Sistem Validasi
                 </span>
                 <ShieldCheck className="h-4 w-4 text-sky-900 dark:text-sky-400" />
               </div>
               <div>
-                <span className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                  100%
+                <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  Bukti Foto
                 </span>
-                <p className="mt-2 text-xs text-slate-600 dark:text-slate-350">
-                  Data terdokumentasi dan transparan
+                <p className="mt-2 text-xs text-slate-655 dark:text-slate-350">
+                  Setiap aksi warga wajib melampirkan foto bukti lokasi sebelum disetujui.
+                </p>
+              </div>
+            </div>
+
+            {/* Another Small Feature Card: Webhook */}
+            <div className="bento-card flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm relative overflow-hidden group">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Alokasi Otomatis
+                </span>
+                <Clock className="h-4 w-4 text-sky-900 dark:text-sky-400" />
+              </div>
+              <div>
+                <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  Real-Time
+                </span>
+                <p className="mt-2 text-xs text-slate-655 dark:text-slate-350">
+                  Webhook menyetujui tugas, memotong dana CSR & menambah poin warga seketika.
                 </p>
               </div>
             </div>
@@ -499,14 +499,16 @@ function Home() {
       {/* Footer Section */}
       <footer className="border-t border-slate-200 bg-white py-16 dark:border-slate-900 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex items-center gap-2.5 font-semibold text-slate-850 dark:text-white">
-            <Compass className="h-5 w-5 text-sky-900 dark:text-sky-400" />
-            <span>
-              Jalan{' '}
-              <span className="text-slate-400 font-normal">
-                | Jaringan Relawan
+          <div className="flex items-center gap-2.5">
+            <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-9 w-auto object-contain" />
+            <div className="flex flex-col leading-tight text-left">
+              <span className="font-bold text-base text-slate-850 dark:text-white">
+                Jalan
               </span>
-            </span>
+              <span className="text-[9px] text-slate-400 font-medium tracking-wide">
+                Jaringan Relawan
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">

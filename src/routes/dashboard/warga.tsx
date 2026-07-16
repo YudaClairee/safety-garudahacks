@@ -1,11 +1,54 @@
 import { useState } from 'react'
 import type { FormEvent, ChangeEvent } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { LogOut, Gift, X, Image as ImageIcon, CheckCircle2 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 
-export const Route = createFileRoute('/dashboard/warga')({ component: WargaRoute })
+type TaskStatus = 'Pending' | 'Approved'
+
+type TaskReport = {
+  id: string
+  category: string
+  status: TaskStatus
+  createdAt: string
+  photoUrl: string
+}
+
+export const Route = createFileRoute('/dashboard/warga')({
+  loader: async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return { points: 0, history: [] }
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('points')
+      .eq('id', session.user.id)
+      .single()
+    
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('id, type, status, created_at, photo_url')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+
+    return {
+      points: user?.points || 0,
+      history: (tasks || []).map(t => ({
+        id: t.id,
+        category: t.type,
+        status: t.status === 'approved' ? 'Approved' : 'Pending',
+        photoUrl: t.photo_url || '',
+        createdAt: new Date(t.created_at).toLocaleString('id-ID', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        }),
+      })) as TaskReport[]
+    }
+  },
+  component: WargaRoute
+})
 
 const taskCategories = [
   'Membersihkan lingkungan',
@@ -17,41 +60,33 @@ const taskCategories = [
   'Kegiatan sosial lainnya',
 ]
 
-type TaskStatus = 'Pending' | 'Approved'
-
-type TaskReport = {
-  id: string
-  category: string
-  note: string
-  status: TaskStatus
-  createdAt: string
-}
+const rewards = [
+  { id: '1', name: 'Saldo GoPay Rp 25.000', cost: 10000, provider: 'GoPay' },
+  { id: '2', name: 'Saldo GoPay Rp 50.000', cost: 18000, provider: 'GoPay' },
+  { id: '3', name: 'Pulsa Seluler Rp 25.000', cost: 9500, provider: 'Telkomsel/Indosat/XL' },
+  { id: '4', name: 'Voucher Listrik PLN Rp 50.000', cost: 19000, provider: 'PLN' },
+  { id: '5', name: 'Voucher Sembako Rp 100.000', cost: 35000, provider: 'Indomaret' },
+]
 
 function WargaRoute() {
-  const [points] = useState(25000)
+  const { points, history: initialHistory } = Route.useLoaderData()
+  const router = useRouter()
+  
   const [category, setCategory] = useState(taskCategories[0])
-  const [note, setNote] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [exchangeMessage, setExchangeMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [history, setHistory] = useState<TaskReport[]>([
-    {
-      id: '1',
-      category: 'Membersihkan lingkungan',
-      note: 'Mengumpulkan sampah plastik di area taman kota.',
-      status: 'Approved',
-      createdAt: '17 Jul 2026, 08:45',
-    },
-    {
-      id: '2',
-      category: 'Membantu tetangga lansia',
-      note: 'Membelikan bahan makanan ke rumah Bu Rina.',
-      status: 'Pending',
-      createdAt: '17 Jul 2026, 14:10',
-    },
-  ])
+
+  // Reward Store states
+  const [isRewardOpen, setIsRewardOpen] = useState(false)
+  const [successClaim, setSuccessClaim] = useState<string | null>(null)
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.navigate({ to: '/login' })
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -66,6 +101,9 @@ function WargaRoute() {
     setLoading(true)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Anda belum login.')
+
       const filePath = `tasks/${Date.now()}_${photo.name}`
       const { error: uploadError, data } = await supabase.storage
         .from('task_photos')
@@ -78,34 +116,33 @@ function WargaRoute() {
         throw uploadError
       }
 
-      setMessage(
-        `Foto berhasil diunggah ke Supabase storage: ${data.path}. Laporan untuk kategori "${category}" telah dikirim.`
-      )
-      setHistory((current) => [
-        {
-          id: `${Date.now()}`,
-          category,
-          note,
-          status: 'Pending',
-          createdAt: new Date().toLocaleString('id-ID', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-        },
-        ...current,
-      ])
+      const { data: publicUrlData } = supabase.storage
+        .from('task_photos')
+        .getPublicUrl(data.path)
+
+      const { error: insertError } = await supabase
+        .from('tasks')
+        .insert({
+          user_id: session.user.id,
+          type: category,
+          status: 'pending',
+          photo_url: publicUrlData.publicUrl
+        })
+      
+      if (insertError) throw insertError
+
+      setMessage(`Laporan untuk kategori "${category}" telah berhasil dikirim.`)
       setPhoto(null)
-      setNote('')
+      setPhotoPreview(null)
       setCategory(taskCategories[0])
-      setExchangeMessage(null)
+      
+      // Invalidate to refresh loader data
+      router.invalidate()
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : 'Terjadi kesalahan saat mengunggah foto tugas.'
+          : 'Terjadi kesalahan saat mengirim laporan tugas.'
       )
     } finally {
       setLoading(false)
@@ -115,168 +152,278 @@ function WargaRoute() {
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null
     setPhoto(file)
+    if (file) {
+      setPhotoPreview(URL.createObjectURL(file))
+    } else {
+      setPhotoPreview(null)
+    }
   }
 
-  function handleExchangePoints() {
-    setExchangeMessage('Fitur Tukar Poin sementara aktif. Ini adalah tombol dummy untuk demonstrasi.')
+  function handleClaimReward(rewardName: string, cost: number) {
+    if (points < cost) {
+      alert('Poin Kebaikan Anda tidak cukup untuk menukarkan penghargaan ini.')
+      return
+    }
+    setSuccessClaim(`Selamat! Anda telah sukses menukarkan ${cost.toLocaleString('id-ID')} poin untuk "${rewardName}". Kode e-voucher akan dikirim ke email Anda.`)
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-3xl space-y-6">
-        <section className="rounded-[2rem] border border-border bg-card/90 p-8 shadow-lg shadow-black/5 backdrop-blur-xl">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Saldo Warga</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight">Poin Kebaikan</h1>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                Ini adalah saldo poin kebaikan Anda yang dapat digunakan untuk melaporkan tugas dan mendapatkan penghargaan.
-              </p>
+    <div className="min-h-screen bg-slate-50 text-foreground">
+      {/* Navbar / Header */}
+      <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-10 w-auto object-contain" />
+              <span className="text-xl font-bold tracking-tight text-primary">
+                Jalan Warga
+              </span>
             </div>
-            <div className="rounded-[1.5rem] bg-primary px-6 py-5 text-white shadow-xl shadow-primary/20 sm:min-w-[12rem]">
-              <p className="text-sm uppercase tracking-[0.28em] text-white/80">Total Poin</p>
-              <p className="mt-4 text-4xl font-semibold leading-none">{points.toLocaleString('id-ID')}</p>
-              <p className="mt-1 text-sm text-white/80">Poin Kebaikan</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-[2rem] border border-border bg-card/90 p-8 shadow-lg shadow-black/5 backdrop-blur-xl">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Form Lapor Tugas</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Pilih satu dari 7 kategori tugas berikut dan unggah bukti foto Tugas.
-              </p>
-            </div>
-            <span className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-              7 kategori tersedia
-            </span>
-          </div>
-
-          <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label htmlFor="category" className="block text-sm font-medium text-foreground">
-                Kategori Tugas
-              </label>
-              <select
-                id="category"
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-650">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-slate-700 transition-colors hover:bg-slate-200 cursor-pointer"
               >
-                {taskCategories.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Keluar</span>
+              </button>
+              <div className="h-8 w-8 rounded-full bg-slate-200" />
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="mx-auto max-w-3xl px-4 py-10">
+        <div className="space-y-6">
+          <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Saldo Warga</p>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight">Poin Kebaikan</h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                  Ini adalah saldo poin kebaikan Anda yang dikumpulkan dari verifikasi kontribusi aksi relawan Anda.
+                </p>
+              </div>
+              <div className="rounded-[1.5rem] bg-primary px-6 py-5 text-white shadow-xl shadow-primary/20 sm:min-w-[12rem] flex flex-col justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/80">Total Poin</p>
+                  <p className="mt-2 text-4xl font-bold leading-none">{points.toLocaleString('id-ID')}</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setSuccessClaim(null)
+                    setIsRewardOpen(true)
+                  }}
+                  className="mt-4 flex w-full justify-center items-center gap-2 bg-white/20 hover:bg-white/30 text-xs font-semibold py-2 px-3 rounded-xl transition cursor-pointer"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  Tukar Rewards
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Form Lapor Tugas</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Pilih satu dari kategori tugas berikut dan unggah bukti foto tugas yang Anda lakukan.
+                </p>
+              </div>
+              <span className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary w-fit">
+                {taskCategories.length} kategori aktif
+              </span>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="note" className="block text-sm font-medium text-foreground">
-                Catatan singkat (opsional)
-              </label>
-              <textarea
-                id="note"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                rows={4}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder="Tambahkan detail tugas atau lokasi jika perlu"
-              />
+            <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label htmlFor="category" className="block text-sm font-medium text-foreground">
+                  Kategori Tugas
+                </label>
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  {taskCategories.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="photo" className="block text-sm font-medium text-foreground">
+                  Unggah Bukti Foto Aksi
+                </label>
+                <div className="flex flex-col gap-4">
+                  <input
+                    id="photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                  {photoPreview && (
+                    <div className="relative w-full max-w-sm rounded-2xl overflow-hidden border border-slate-200 aspect-video">
+                      <img src={photoPreview} alt="Selected proof preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhoto(null)
+                          setPhotoPreview(null)
+                        }}
+                        className="absolute top-2 right-2 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full p-1.5 transition cursor-pointer"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {error ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {error}
+                </div>
+              ) : null}
+
+              {message ? (
+                <div className="rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+                  {message}
+                </div>
+              ) : null}
+
+              <Button type="submit" className="w-full h-11 rounded-2xl" disabled={loading}>
+                {loading ? 'Mengunggah Laporan...' : 'Kirim Laporan Tugas'}
+              </Button>
+            </form>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold">Riwayat Tugas Relawan</h2>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Status Laporan</p>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="photo" className="block text-sm font-medium text-foreground">
-                Unggah Foto Bukti Tugas
-              </label>
-              <input
-                id="photo"
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-              {photo ? (
-                <p className="text-sm text-muted-foreground">File terpilih: {photo.name}</p>
+            <div className="mt-6 space-y-4">
+              {initialHistory.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-slate-200 rounded-3xl">
+                  <div className="flex justify-center mb-3">
+                    <ImageIcon className="h-10 w-10 text-slate-355" />
+                  </div>
+                  <p className="text-sm text-slate-500 font-medium">Belum ada riwayat tugas.</p>
+                  <p className="text-xs text-slate-400 mt-1">Unggah aksi pertamamu menggunakan formulir di atas!</p>
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Pilih foto tugas untuk diunggah ke Supabase storage.</p>
+                initialHistory.map((task) => (
+                  <article
+                    key={task.id}
+                    className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 shadow-sm"
+                  >
+                    <div className="flex items-center gap-4">
+                      {task.photoUrl ? (
+                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200 shadow-inner">
+                          <img src={task.photoUrl} alt="Bukti Foto" className="h-full w-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="h-16 w-16 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-100 border border-slate-200">
+                          <ImageIcon className="h-6 w-6 text-slate-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{task.category}</p>
+                        <p className="text-xs text-slate-400 mt-1">{task.createdAt}</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            task.status === 'Approved'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {task.status}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))
               )}
             </div>
+          </section>
+        </div>
+      </main>
 
-            {error ? (
-              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {error}
-              </div>
-            ) : null}
+      {/* Rewards Store Modal */}
+      {isRewardOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl bg-white p-8 shadow-xl border border-slate-150 flex flex-col max-h-[85vh]">
+            <button
+              onClick={() => setIsRewardOpen(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
 
-            {message ? (
-              <div className="rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
-                {message}
-              </div>
-            ) : null}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Mengunggah...' : 'Kirim Laporan Tugas'}
-            </Button>
-          </form>
-        </section>
-
-        <section className="rounded-[2rem] border border-border bg-card/90 p-8 shadow-lg shadow-black/5 backdrop-blur-xl">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Tukar Poin</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Gunakan poin Anda untuk menukar rewards. Tombol di bawah ini hanya dummy dan tidak akan mengubah saldo.
-              </p>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
+              <Gift className="h-6 w-6 text-primary" />
+              Tukar Saldo & E-Voucher
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Gunakan Poin Kebaikan hasil kerja sosial Anda untuk menukarkan rewards di bawah.
+            </p>
+            <div className="mt-2 text-xs font-medium text-slate-700">
+              Saldo Poin Saat Ini: <span className="text-primary font-bold">{points.toLocaleString('id-ID')} Poin</span>
             </div>
-            <Button type="button" variant="secondary" onClick={handleExchangePoints}>
-              Tukar Poin
-            </Button>
-          </div>
-          {exchangeMessage ? (
-            <div className="mt-5 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
-              {exchangeMessage}
-            </div>
-          ) : null}
-        </section>
 
-        <section className="rounded-[2rem] border border-border bg-card/90 p-8 shadow-lg shadow-black/5 backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold">Riwayat Tugas</h2>
-            <p className="text-sm text-muted-foreground">Status pending / approved</p>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            {history.map((task) => (
-              <article
-                key={task.id}
-                className="rounded-3xl border border-border bg-background/80 p-5 shadow-sm"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{task.category}</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{task.note}</p>
+            {successClaim ? (
+              <div className="mt-6 p-6 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm flex flex-col items-center text-center gap-3">
+                <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+                <p className="font-semibold text-base">Penukaran Berhasil!</p>
+                <p className="text-xs leading-relaxed">{successClaim}</p>
+                <button
+                  onClick={() => setSuccessClaim(null)}
+                  className="mt-2 text-xs font-semibold px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition cursor-pointer"
+                >
+                  Tukar Lagi
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-3 overflow-y-auto pr-1 flex-1">
+                {rewards.map((reward) => (
+                  <div 
+                    key={reward.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition gap-4"
+                  >
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">{reward.name}</h4>
+                      <p className="text-xs text-slate-400 mt-0.5">Provider: {reward.provider}</p>
+                    </div>
+                    <div className="flex items-center gap-4 justify-between sm:justify-end">
+                      <span className="text-sm font-semibold text-primary">{reward.cost.toLocaleString('id-ID')} Poin</span>
+                      <button
+                        onClick={() => handleClaimReward(reward.name, reward.cost)}
+                        disabled={points < reward.cost}
+                        className={`text-xs font-semibold py-2 px-4 rounded-xl transition cursor-pointer ${
+                          points >= reward.cost
+                            ? 'bg-primary text-white hover:opacity-90'
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        Tukarkan
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <span
-                      className={`rounded-full px-3 py-1 font-medium ${
-                        task.status === 'Approved'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {task.status}
-                    </span>
-                    <span className="text-muted-foreground">{task.createdAt}</span>
-                  </div>
-                </div>
-              </article>
-            ))}
+                ))}
+              </div>
+            )}
           </div>
-        </section>
-      </div>
-    </main>
+        </div>
+      )}
+    </div>
   )
 }
