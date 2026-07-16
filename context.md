@@ -5,14 +5,14 @@ You are building an MVP for a B2B2C micro-insurance platform called "WaktuJaga".
 The goal is to build a functional Proof of Concept (PoC) demonstrating the core transaction loop within an 18-hour hackathon timeframe.
 
 ## 2. Tech Stack Requirements
-*   **Core Framework:** Next.js (App Router) running on a Node.js environment.
+*   **Core Framework:** TanStack Start (menggunakan TanStack Router) + TanStack Query.
 *   **Language:** Strict TypeScript (Full-Stack).
-*   **Styling:** Tailwind CSS + shadcn/ui (use pre-built components for speed).
+*   **Styling:** Tailwind CSS + Radix UI.
 *   **Database & Auth:** Supabase (PostgreSQL). Use Supabase generated TypeScript types.
-*   **External Integration:** Design API endpoints (Next.js Route Handlers) to accept webhooks from external workflow automation platforms (Make.com / n8n) which will handle off-app processing (like OCR/image verification).
+*   **External Integration:** Design API endpoints (TanStack Start API Routes) to accept webhooks from external workflow automation platforms (Make.com / n8n) which will handle off-app processing (like OCR/image verification).
 
 ## 3. Architecture: Single App, Role-Based Access
-Do not build separate apps. Build a single Next.js application with two distinct layouts based on user roles. Ignore complex JWT/OAuth for this MVP; use a simple mocked login state or Supabase basic auth.
+Do not build separate apps. Build a single TanStack Start application with two distinct layouts based on user roles. Ignore complex JWT/OAuth for this MVP; use a simple mocked login state or Supabase basic auth.
 
 *   **Role 1: Warga (B2C / Community Member)**
     *   Mobile-first UI.
@@ -52,7 +52,7 @@ Create types for these tables:
 ## 5. The "Golden Flow" to Implement
 1. Warga visits `/dashboard/warga` and submits a task form.
 2. The form data is saved to the `tasks` table with status 'pending'.
-3. **Simulated Automation:** Instead of waiting for real external webhooks, create a Next.js Server Action or API Route (`/api/trigger-automation`) that acts as a mock Make.com/n8n agent. When triggered, it automatically changes the task status to 'approved', calculates `credit_earned` (hours * 25000), adds it to the user's `balance`, and updates `funds_disbursed` in `corporate_funds`.
+3. **Simulated Automation:** Instead of waiting for real external webhooks, create a Server Function or API Route (`/api/trigger-automation`) that acts as a mock Make.com/n8n agent. When triggered, it automatically changes the task status to 'approved', calculates `credit_earned` (hours * 25000), adds it to the user's `balance`, and updates `funds_disbursed` in `corporate_funds`.
 4. Corporate user visits `/dashboard/corporate` and sees the updated metrics dynamically.
 
 ## 6. Coding Rules for the Agent
