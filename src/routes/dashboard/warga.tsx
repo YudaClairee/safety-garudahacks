@@ -39,7 +39,7 @@ type RedemptionRecord = {
 export const Route = createFileRoute('/dashboard/warga')({
   loader: async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { points: 0, history: [], activePrograms: [], registrations: [], redemptions: [] }
+    if (!session) return { points: 0, history: [], activePrograms: [], registrations: [] as string[], redemptions: [] }
 
     const { data: user } = await supabase
       .from('users')
@@ -186,7 +186,7 @@ const rewards = [
 const workAreas = ['Lingkungan', 'Sosial', 'Tata Kelola']
 
 function WargaRoute() {
-  const { points, history: initialHistory, activePrograms, redemptions, recentUsersCount, mitigationSuccessCount } = Route.useLoaderData()
+  const { points, history: initialHistory, activePrograms, registrations, redemptions, recentUsersCount, mitigationSuccessCount } = Route.useLoaderData()
   const router = useRouter()
   
   const [selectedProgramId, setSelectedProgramId] = useState('general')

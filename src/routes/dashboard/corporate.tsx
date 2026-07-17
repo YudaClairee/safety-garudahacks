@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { CSRProgram } from '../../lib/types'
 import { getTaskCategory, taskCategories } from '../../lib/task-categories'
@@ -20,7 +20,13 @@ import {
 export const Route = createFileRoute('/dashboard/corporate')({
   loader: async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { programs: [], tasks: [] }
+    if (!session) return { programs: [], tasks: [], companyName: 'Perusahaan CSR' }
+
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', session.user.id)
+      .single()
 
     const { data: programsData, error: programsError } = await supabase
       .from('csr_programs')
@@ -40,13 +46,14 @@ export const Route = createFileRoute('/dashboard/corporate')({
     return {
       programs: (programsData || []) as CSRProgram[],
       tasks: (tasksData || []) as any[],
+      companyName: userProfile?.full_name || 'Perusahaan CSR',
     }
   },
   component: CorporateDashboard,
 })
 
 function CorporateDashboard() {
-  const { programs, tasks } = Route.useLoaderData()
+  const { programs, tasks, companyName: loggedCompanyName } = Route.useLoaderData()
   const router = useRouter()
 
   const [isSimulating, setIsSimulating] = useState(false)
@@ -92,7 +99,14 @@ function CorporateDashboard() {
 
   // Form states
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [companyName, setCompanyName] = useState('')
+  const [companyName, setCompanyName] = useState(loggedCompanyName || '')
+  
+  useEffect(() => {
+    if (loggedCompanyName) {
+      setCompanyName(loggedCompanyName)
+    }
+  }, [loggedCompanyName])
+
   const [budget, setBudget] = useState('')
   const [location, setLocation] = useState('')
   const [rewardType, setRewardType] = useState('Safety Credits/Poin')
@@ -236,7 +250,6 @@ function CorporateDashboard() {
     'Membersihkan lingkungan',
     'Menanam pohon',
     'Mengelola sampah',
-    'Mengajar anak-anak',
   ]
 
   const approvedTasks = tasks.filter(task => task.status === 'approved')
@@ -244,24 +257,22 @@ function CorporateDashboard() {
   const mitigationSuccessCount = approvedTasks.filter(task =>
     mitigationCategories.includes(task.type),
   ).length
-  const estimatedHouseholdImpact = totalVolunteersHelped * 1.8
+  const estimatedHouseholdImpact = totalVolunteersHelped * 3.9
 
   const categoryToWorkArea: Record<string, string> = {
     'Membersihkan lingkungan': 'Lingkungan',
     'Menanam pohon': 'Lingkungan',
     'Mengelola sampah': 'Lingkungan',
+    'Membantu tetangga lansia': 'Sosial',
     'Mengajar anak-anak': 'Sosial',
-    'Mendukung UMKM': 'Sosial',
-    'Pelatihan keterampilan': 'Sosial',
-    'Mengawal anggaran publik': 'Tata Kelola',
-    'Kampanye literasi hukum': 'Tata Kelola',
-    'Pendampingan layanan': 'Sosial',
+    'Donasi makanan': 'Sosial',
+    'Kegiatan sosial lainnya': 'Sosial',
   }
 
   const workAreas = Array.from(
     new Set(
       tasks
-        .map(task => categoryToWorkArea[task.type] || 'Lingkungan')
+        .map(task => categoryToWorkArea[task.type])
         .filter(Boolean),
     ),
   )
@@ -270,17 +281,17 @@ function CorporateDashboard() {
     {
       label: 'Total Warga Terbantu',
       value: totalVolunteersHelped.toLocaleString('id-ID'),
-      description: 'Jumlah relawan yang berhasil mendapatkan dukungan dari program CSR.',
+      description: 'Jumlah relawan penerima Safety Net tunai yang aksi relawannya telah disetujui.',
     },
     {
       label: 'Aksi Mitigasi Berhasil',
       value: mitigationSuccessCount.toString(),
-      description: 'Total tugas mitigasi lingkungan yang sudah disetujui dan terealisasi.',
+      description: 'Total tugas mitigasi kebencanaan fisik & kebersihan lingkungan yang disetujui.',
     },
     {
-      label: 'Estimasi Dampak Rumah Tangga',
+      label: 'Estimasi Anggota Keluarga Terbantu',
       value: estimatedHouseholdImpact.toFixed(0),
-      description: 'Perkiraan jumlah rumah tangga yang terimbas positif dari program ini.',
+      description: 'Dampak tidak langsung berdasarkan BPS Index (Rata-rata 3,9 anggota keluarga per rumah tangga).',
     },
     {
       label: 'Skor ESG',
@@ -290,7 +301,7 @@ function CorporateDashboard() {
           70 + Math.round((mitigationSuccessCount / Math.max(1, approvedTasks.length)) * 15) + Math.min(15, totalVolunteersHelped),
         ),
       ),
-      description: 'Indeks ringkas performa lingkungan, sosial, dan tata kelola dari program CSR Anda.',
+      description: 'Skor performa CSR (Baseline kepatuhan 70 + rasio efisiensi mitigasi lingkungan + jangkauan relawan).',
     },
   ]
 
@@ -325,7 +336,7 @@ function CorporateDashboard() {
     const reportHtml = `
       <html>
         <head>
-          <title>Laporan ESG Jalan Corporate</title>
+          <title>Laporan ESG ${escapeHtml(loggedCompanyName)}</title>
           <style>
             body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; color: #0f172a; }
             .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
@@ -353,7 +364,7 @@ function CorporateDashboard() {
           <div class="brand">
             <img src="https://via.placeholder.com/48x48.png?text=J" alt="Jalan Logo" />
             <div>
-              <h1>Laporan ESG Jalan Corporate</h1>
+              <h1>Laporan ESG ${escapeHtml(loggedCompanyName)}</h1>
               <p style="margin-top: 8px; color: #475569; font-size: 12px;">Ringkasan metrik keberlanjutan, log aktivitas, dan branding perusahaan.</p>
             </div>
           </div>
@@ -365,7 +376,7 @@ function CorporateDashboard() {
               <li><strong>Total Anggaran CSR:</strong> ${escapeHtml(formatCurrency(totalBudgetAllocated))}</li>
               <li><strong>Program Aktif:</strong> ${escapeHtml(activeProgramsCount)}</li>
               <li><strong>Relawan Terlibat:</strong> ${escapeHtml(totalVolunteersHelped)}</li>
-              <li><strong>Estimasi Rumah Tangga Terimbas:</strong> ${escapeHtml(estimatedHouseholdImpact.toFixed(0))}</li>
+              <li><strong>Estimasi Anggota Keluarga Terbantu:</strong> ${escapeHtml(estimatedHouseholdImpact.toFixed(0))} (BPS Index 3.9)</li>
             </ul>
           </div>
 
@@ -406,7 +417,7 @@ function CorporateDashboard() {
           </div>
 
           <div class="footer">
-            <p>Jalan Corporate · Laporan ESG generated by the CSR dashboard.</p>
+            <p>${escapeHtml(loggedCompanyName)} · Laporan ESG generated by the CSR dashboard.</p>
           </div>
         </body>
       </html>
@@ -537,7 +548,7 @@ function CorporateDashboard() {
             <div className="flex items-center gap-3">
               <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-10 w-auto object-contain" />
               <span className="text-xl font-bold tracking-tight text-primary">
-                Jalan Corporate
+                {loggedCompanyName}
               </span>
             </div>
             <div className="flex items-center gap-4 text-sm font-medium text-slate-600">

@@ -10,6 +10,7 @@ function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<'warga' | 'corporate'>('warga')
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [loading, setLoading] = useState(false)
@@ -34,14 +35,14 @@ function LoginPage() {
         }
 
         if (signUpData.user) {
-          // Update the public.users table with the selected role immediately after signup
+          // Update the public.users table with the selected role and name immediately after signup
           const { error: updateError } = await supabase
             .from('users')
-            .update({ role })
+            .update({ role, full_name: fullName.trim() })
             .eq('id', signUpData.user.id)
           
           if (updateError) {
-            console.error('Failed to set role:', updateError)
+            console.error('Failed to set role and name:', updateError)
           }
         }
       }
@@ -111,6 +112,23 @@ function LoginPage() {
                   Perusahaan (CSR)
                 </button>
               </div>
+            </div>
+          )}
+
+          {mode === 'register' && (
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="fullName">
+                {role === 'warga' ? 'Nama Lengkap' : 'Nama Perusahaan'}
+              </label>
+              <input
+                id="fullName"
+                type="text"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                required
+                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder={role === 'warga' ? 'Nama Lengkap Anda' : 'Nama Perusahaan Anda'}
+              />
             </div>
           )}
 

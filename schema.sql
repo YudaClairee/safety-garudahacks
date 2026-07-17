@@ -4,6 +4,7 @@ CREATE TABLE public.users (
   email TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'warga', -- 'warga' atau 'corporate'
   points INTEGER DEFAULT 0,
+  full_name TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
