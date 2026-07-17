@@ -36,7 +36,7 @@ type RedemptionRecord = {
 export const Route = createFileRoute('/dashboard/warga')({
   loader: async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { points: 0, history: [], activePrograms: [], redemptions: [] }
+    if (!session) return { points: 0, history: [], activePrograms: [], registrations: [], redemptions: [] }
 
     const { data: user } = await supabase
       .from('users')
@@ -52,7 +52,7 @@ export const Route = createFileRoute('/dashboard/warga')({
 
     const { data: activeProgramsData } = await supabase
       .from('csr_programs')
-      .select('id, company_name, focus_category, budget_rupiah, location, reward_type, reward_value')
+      .select('id, company_name, focus_category, budget_rupiah, location, reward_type, reward_value, start_date, end_date')
       .gt('budget_rupiah', 0)
       .order('created_at', { ascending: false })
 
@@ -61,6 +61,13 @@ export const Route = createFileRoute('/dashboard/warga')({
       .select('id, reward_name, reward_type, reward_value, points_cost, voucher_code, status, created_at')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
+
+    const { data: regsData } = await supabase
+      .from('program_registrations')
+      .select('program_id')
+      .eq('user_id', session.user.id)
+
+    const registrations = (regsData || []).map(r => r.program_id) as string[]
 
     const activePrograms = (activeProgramsData || []) as any[]
 
@@ -97,6 +104,7 @@ export const Route = createFileRoute('/dashboard/warga')({
         }
       }) as TaskReport[],
       activePrograms,
+      registrations,
       redemptions: (redemptionsData || []).map((item) => ({
         id: item.id,
         rewardName: item.reward_name,
@@ -143,7 +151,7 @@ const rewards = [
 ]
 
 function WargaRoute() {
-  const { points, history: initialHistory, activePrograms, redemptions } = Route.useLoaderData()
+  const { points, history: initialHistory, activePrograms, registrations, redemptions } = Route.useLoaderData()
   const router = useRouter()
   
   const [selectedProgramId, setSelectedProgramId] = useState('general')
@@ -155,11 +163,57 @@ function WargaRoute() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [registeringId, setRegisteringId] = useState<string | null>(null)
+
+  async function handleRegisterProgram(programId: string) {
+    setRegisteringId(programId)
+    setError(null)
+    setMessage(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        alert('Sesi login tidak ditemukan. Silakan login kembali.')
+        return
+      }
+
+      const { error: regError } = await supabase
+        .from('program_registrations')
+        .insert({
+          user_id: session.user.id,
+          program_id: programId,
+        })
+      
+      if (regError) throw regError
+
+      alert('Berhasil mendaftar program CSR! Anda sekarang terdaftar untuk aksi ini.')
+      router.invalidate()
+    } catch (err: any) {
+      alert(`Gagal mendaftar: ${err.message || String(err)}`)
+    } finally {
+      setRegisteringId(null)
+    }
+  }
 
   // Reward Store states
   const [isRewardOpen, setIsRewardOpen] = useState(false)
   const [successClaim, setSuccessClaim] = useState<string | null>(null)
   const [voucherCode, setVoucherCode] = useState<string | null>(null)
+
+  const selectedProgram = activePrograms.find(p => p.id === selectedProgramId)
+  const isGeneral = selectedProgramId === 'general'
+  const isRegisteredForSelected = isGeneral ? true : registrations.includes(selectedProgramId)
+  const selectedProgramHasStarted = isGeneral ? true : (selectedProgram?.start_date ? new Date() >= new Date(selectedProgram.start_date) : true)
+  const selectedProgramHasEnded = isGeneral ? false : (selectedProgram?.end_date ? (() => {
+    const d = new Date(selectedProgram.end_date)
+    d.setHours(23, 59, 59, 999)
+    return new Date() > d
+  })() : false)
+  
+  // Platform Fee quota calculation
+  const selectedProgramCost = selectedProgram ? Math.round(Number(selectedProgram.reward_value || 0) * 1.12) : 0
+  const selectedProgramHasQuota = isGeneral ? true : (selectedProgram ? Number(selectedProgram.budget_rupiah) >= selectedProgramCost : false)
+  
+  const isFormBlocked = !isGeneral && (!isRegisteredForSelected || !selectedProgramHasStarted || selectedProgramHasEnded || !selectedProgramHasQuota)
 
   function handleProgramChange(id: string) {
     setSelectedProgramId(id)
@@ -183,6 +237,39 @@ function WargaRoute() {
     event.preventDefault()
     setError(null)
     setMessage(null)
+
+    if (selectedProgramId !== 'general') {
+      const prog = activePrograms.find(p => p.id === selectedProgramId)
+      if (prog) {
+        const isReg = registrations.includes(selectedProgramId)
+        if (!isReg) {
+          setError('Anda belum terdaftar untuk program ini. Silakan mendaftar terlebih dahulu.')
+          return
+        }
+
+        const isBefore = prog.start_date ? new Date() < new Date(prog.start_date) : false
+        if (isBefore) {
+          setError(`Aksi program ini belum dimulai. Baru dimulai pada ${new Date(prog.start_date).toLocaleString('id-ID')}`)
+          return
+        }
+
+        const isAfter = prog.end_date ? (() => {
+          const d = new Date(prog.end_date)
+          d.setHours(23, 59, 59, 999)
+          return new Date() > d
+        })() : false
+        if (isAfter) {
+          setError('Periode program CSR ini sudah berakhir.')
+          return
+        }
+
+        const cost = Math.round(Number(prog.reward_value || 0) * 1.12)
+        if (Number(prog.budget_rupiah) < cost) {
+          setError('Kuota pendanaan program CSR ini sudah habis.')
+          return
+        }
+      }
+    }
 
     if (!photo) {
       setError('Silakan pilih foto tugas sebelum mengirim laporan.')
@@ -457,149 +544,194 @@ function WargaRoute() {
                   className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="general">Cocokkan Otomatis (Pooled Funding)</option>
-                  {activePrograms.map((prog) => (
-                    <option key={prog.id} value={prog.id}>
-                      {prog.company_name} (Fokus: {prog.focus_category} | Lokasi: {prog.location || 'Semua Wilayah'} | +{Number(prog.reward_value || 0).toLocaleString('id-ID')} Poin)
-                    </option>
-                  ))}
+                  {activePrograms.map((prog) => {
+                    const cost = Math.round(Number(prog.reward_value || 0) * 1.12)
+                    const remaining = cost > 0 ? Math.floor(Number(prog.budget_rupiah) / cost) : 0
+                    return (
+                      <option key={prog.id} value={prog.id} disabled={remaining <= 0}>
+                        {prog.company_name} (Fokus: {prog.focus_category} | Lokasi: {prog.location || 'Semua Wilayah'} | +{Number(prog.reward_value || 0).toLocaleString('id-ID')} Poin | Sisa Kuota: {remaining} slot)
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="category" className="block text-sm font-medium text-foreground">
-                  Kategori Tugas
-                </label>
-                <div className="grid gap-3">
-                  {taskCategories.map((item) => {
-                    const isSelected = category === item.value
-                    const isDisabled = selectedProgramId !== 'general'
-
-                    return (
-                      <button
-                        key={item.value}
-                        type="button"
-                        disabled={isDisabled}
-                        onClick={() => setCategory(item.value)}
-                        className={`w-full rounded-2xl border px-4 py-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                          isSelected
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-border bg-background hover:border-primary/40 hover:bg-slate-50'
-                        } ${
-                          isDisabled ? 'cursor-not-allowed opacity-60 hover:bg-background' : ''
-                        }`}
-                        aria-pressed={isSelected}
-                        aria-disabled={isDisabled}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-foreground">
-                              {item.label}
-                            </p>
-                            <p className="text-xs leading-5 text-muted-foreground">
-                              {item.description}
-                            </p>
-                          </div>
-                          <div
-                            className={`mt-1 h-4 w-4 rounded-full border-2 ${
-                              isSelected
-                                ? 'border-primary bg-primary'
-                                : 'border-slate-300 bg-white'
-                            }`}
-                            aria-hidden="true"
-                          />
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-                {selectedProgramId !== 'general' && (
-                  <p className="text-[11px] text-slate-500 italic mt-1">
-                    *Kategori dikunci secara otomatis sesuai fokus CSR sponsor yang Anda pilih.
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="location" className="block text-sm font-medium text-slate-700">
-                    Lokasi Spesifik Aksi
-                  </label>
-                  <input
-                    id="location"
-                    type="text"
-                    required
-                    disabled={selectedProgramId !== 'general'}
-                    placeholder="e.g. Jalan Dago RT 03 / Taman Hutan Kota"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full rounded-2xl border border-border bg-background disabled:bg-slate-100 disabled:text-slate-550 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                  {selectedProgramId !== 'general' && (
-                    <p className="text-[10px] text-slate-500 italic mt-1">
-                      *Lokasi dikunci secara otomatis sesuai target wilayah sponsor.
+              {isFormBlocked ? (
+                <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-6 flex flex-col items-center text-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                    <Gift className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {!isRegisteredForSelected 
+                        ? 'Pendaftaran Diperlukan' 
+                        : selectedProgramHasEnded 
+                          ? 'Program CSR Selesai' 
+                          : !selectedProgramHasQuota 
+                            ? 'Kuota Program Habis' 
+                            : 'Aksi Belum Dimulai'}
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-500 max-w-sm leading-relaxed">
+                      {!isRegisteredForSelected
+                        ? `Anda harus mendaftar sebagai relawan untuk program "${selectedProgram?.company_name}" terlebih dahulu sebelum dapat mengirimkan laporan tugas.`
+                        : selectedProgramHasEnded
+                          ? `Program "${selectedProgram?.company_name}" telah berakhir pada ${new Date(selectedProgram.end_date!).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}.`
+                          : !selectedProgramHasQuota
+                            ? `Program "${selectedProgram?.company_name}" telah kehabisan kuota pendanaan untuk saat ini.`
+                            : `Program "${selectedProgram?.company_name}" baru akan dimulai pada tanggal ${new Date(selectedProgram.start_date!).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`}
                     </p>
+                  </div>
+                  
+                  {!isRegisteredForSelected && !selectedProgramHasEnded && (
+                    <Button
+                      type="button"
+                      onClick={() => handleRegisterProgram(selectedProgramId)}
+                      disabled={registeringId === selectedProgramId}
+                      className="mt-2 w-full max-w-[200px]"
+                    >
+                      {registeringId === selectedProgramId ? 'Mendaftar...' : 'Daftar Aksi Sekarang'}
+                    </Button>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <label htmlFor="description" className="block text-sm font-medium text-slate-700">
-                    Deskripsi Singkat Kegiatan
-                  </label>
-                  <input
-                    id="description"
-                    type="text"
-                    placeholder="e.g. Menyapu tumpukan sampah plastik yang menyumbat air"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label htmlFor="category" className="block text-sm font-medium text-foreground">
+                      Kategori Tugas
+                    </label>
+                    <div className="grid gap-3">
+                      {taskCategories.map((item) => {
+                        const isSelected = category === item.value
+                        const isDisabled = selectedProgramId !== 'general'
 
-              <div className="space-y-2">
-                <label htmlFor="photo" className="block text-sm font-medium text-foreground">
-                  Unggah Bukti Foto Aksi
-                </label>
-                <div className="flex flex-col gap-4">
-                  <input
-                    id="photo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                  {photoPreview && (
-                    <div className="relative w-full max-w-sm rounded-2xl overflow-hidden border border-slate-200 aspect-video">
-                      <img src={photoPreview} alt="Selected proof preview" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPhoto(null)
-                          setPhotoPreview(null)
-                        }}
-                        className="absolute top-2 right-2 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full p-1.5 transition cursor-pointer"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            disabled={isDisabled}
+                            onClick={() => setCategory(item.value)}
+                            className={`w-full rounded-2xl border px-4 py-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : 'border-border bg-background hover:border-primary/40 hover:bg-slate-50'
+                            } ${
+                              isDisabled ? 'cursor-not-allowed opacity-60 hover:bg-background' : ''
+                            }`}
+                            aria-pressed={isSelected}
+                            aria-disabled={isDisabled}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="space-y-1">
+                                <p className="text-sm font-semibold text-foreground">
+                                  {item.label}
+                                </p>
+                                <p className="text-xs leading-5 text-muted-foreground">
+                                  {item.description}
+                                </p>
+                              </div>
+                              <div
+                                className={`mt-1 h-4 w-4 rounded-full border-2 ${
+                                  isSelected
+                                    ? 'border-primary bg-primary'
+                                    : 'border-slate-300 bg-white'
+                                }`}
+                                aria-hidden="true"
+                              />
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
-                  )}
-                </div>
-              </div>
+                    {selectedProgramId !== 'general' && (
+                      <p className="text-[11px] text-slate-500 italic mt-1">
+                        *Kategori dikunci secara otomatis sesuai fokus CSR sponsor yang Anda pilih.
+                      </p>
+                    )}
+                  </div>
 
-              {error ? (
-                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                  {error}
-                </div>
-              ) : null}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="location" className="block text-sm font-medium text-slate-700">
+                        Lokasi Spesifik Aksi
+                      </label>
+                      <input
+                        id="location"
+                        type="text"
+                        required
+                        disabled={selectedProgramId !== 'general'}
+                        placeholder="e.g. Jalan Dago RT 03 / Taman Hutan Kota"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="w-full rounded-2xl border border-border bg-background disabled:bg-slate-100 disabled:text-slate-550 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                      {selectedProgramId !== 'general' && (
+                        <p className="text-[10px] text-slate-500 italic mt-1">
+                          *Lokasi dikunci secara otomatis sesuai target wilayah sponsor.
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="description" className="block text-sm font-medium text-slate-700">
+                        Deskripsi Singkat Kegiatan
+                      </label>
+                      <input
+                        id="description"
+                        type="text"
+                        placeholder="e.g. Menyapu tumpukan sampah plastik yang menyumbat air"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
 
-              {message ? (
-                <div className="rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
-                  {message}
-                </div>
-              ) : null}
+                  <div className="space-y-2">
+                    <label htmlFor="photo" className="block text-sm font-medium text-foreground">
+                      Unggah Bukti Foto Aksi
+                    </label>
+                    <div className="flex flex-col gap-4">
+                      <input
+                        id="photo"
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoChange}
+                        className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                      {photoPreview && (
+                        <div className="relative w-full max-w-sm rounded-2xl overflow-hidden border border-slate-200 aspect-video">
+                          <img src={photoPreview} alt="Selected proof preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPhoto(null)
+                              setPhotoPreview(null)
+                            }}
+                            className="absolute top-2 right-2 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full p-1.5 transition cursor-pointer"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-              <Button type="submit" className="w-full h-11 rounded-2xl" disabled={loading}>
-                {loading ? 'Mengunggah Laporan...' : 'Kirim Laporan Tugas'}
-              </Button>
+                  {error ? (
+                    <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                      {error}
+                    </div>
+                  ) : null}
+
+                  {message ? (
+                    <div className="rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+                      {message}
+                    </div>
+                  ) : null}
+
+                  <Button type="submit" className="w-full h-11 rounded-2xl" disabled={loading}>
+                    {loading ? 'Mengunggah Laporan...' : 'Kirim Laporan Tugas'}
+                  </Button>
+                </>
+              )}
             </form>
           </section>
 
@@ -697,33 +829,104 @@ function WargaRoute() {
                   <p className="text-xs text-slate-400 font-medium">Belum ada sponsor CSR aktif.</p>
                 </div>
               ) : (
-                activePrograms.map((program) => (
-                  <div 
-                    key={program.id}
-                    className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 hover:bg-slate-50 transition-colors flex flex-col gap-2.5"
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-900">
-                        {program.company_name}
-                      </span>
-                      <div className="flex flex-col gap-1 mt-1">
-                        {program.focus_category && (
-                          <span className="text-[10px] text-primary font-bold inline-flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                            Fokus: {program.focus_category}
-                          </span>
-                        )}
-                        <span className="text-[11px] text-amber-600 font-bold inline-flex items-center gap-1">
-                          🎁 +{Number(program.reward_value || 0).toLocaleString('id-ID')} Poin
+                activePrograms.map((program) => {
+                  const isRegistered = registrations.includes(program.id)
+                  const startDateObj = program.start_date ? new Date(program.start_date) : null
+                  const endDateObj = program.end_date ? (() => {
+                    const d = new Date(program.end_date)
+                    d.setHours(23, 59, 59, 999)
+                    return d
+                  })() : null
+                  const now = new Date()
+                  
+                  const isBeforeStart = startDateObj ? startDateObj > now : false
+                  const isAfterEnd = endDateObj ? now > endDateObj : false
+                  const isOngoing = !isBeforeStart && !isAfterEnd
+
+                  const cost = Math.round(Number(program.reward_value || 0) * 1.12)
+                  const remaining = cost > 0 ? Math.floor(Number(program.budget_rupiah) / cost) : 0
+                  const total = remaining + (program.tasks_funded || 0)
+                  const hasQuota = remaining > 0
+
+                  const startDateStr = startDateObj ? startDateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : ''
+                  const endDateStr = endDateObj ? endDateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
+                  const periodStr = startDateStr && endDateStr ? `${startDateStr} - ${endDateStr}` : 'Tanpa batas waktu'
+
+                  let statusText = 'Aktif'
+                  let statusStyle = 'text-emerald-600 bg-emerald-50'
+                  if (isAfterEnd) {
+                    statusText = 'Selesai'
+                    statusStyle = 'text-slate-500 bg-slate-100'
+                  } else if (!hasQuota) {
+                    statusText = 'Kuota Habis'
+                    statusStyle = 'text-red-600 bg-red-50'
+                  } else if (isBeforeStart) {
+                    statusText = 'Pendaftaran'
+                    statusStyle = 'text-blue-600 bg-blue-50'
+                  } else if (isOngoing && startDateObj) {
+                    statusText = 'Hari-H'
+                    statusStyle = 'text-amber-600 bg-amber-50'
+                  }
+
+                  return (
+                    <div 
+                      key={program.id}
+                      className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 hover:bg-slate-50 transition-colors flex flex-col gap-2.5"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-900">
+                          {program.company_name}
                         </span>
+                        <div className="flex flex-col gap-1 mt-1">
+                          {program.focus_category && (
+                            <span className="text-[10px] text-primary font-bold inline-flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                              Fokus: {program.focus_category}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            📅 {periodStr}
+                          </span>
+                          <span className="text-[11px] text-amber-600 font-bold inline-flex items-center gap-1 mt-0.5">
+                            🎁 +{Number(program.reward_value || 0).toLocaleString('id-ID')} Poin
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                            🎟️ Kuota: {remaining} / {total} slot
+                          </span>
+                        </div>
                       </div>
+                      <div className="flex items-center justify-between text-xs border-t border-slate-100/50 pt-2">
+                        <span className="text-slate-400">Status Aksi:</span>
+                        <span className={`font-semibold px-2 py-0.5 rounded-md ${statusStyle}`}>{statusText}</span>
+                      </div>
+                      
+                      {isRegistered ? (
+                        <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold py-1.5 mt-1">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                          <span>Anda Sudah Terdaftar</span>
+                        </div>
+                      ) : isAfterEnd ? (
+                        <div className="text-center rounded-xl bg-slate-100 text-slate-500 text-[11px] font-semibold py-1.5 mt-1">
+                          Periode Program Berakhir
+                        </div>
+                      ) : !hasQuota ? (
+                        <div className="text-center rounded-xl bg-red-50 text-red-700 text-[11px] font-semibold py-1.5 mt-1 border border-red-100">
+                          Kuota Pendanaan Habis
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleRegisterProgram(program.id)}
+                          disabled={registeringId === program.id}
+                          type="button"
+                          className="w-full mt-1 rounded-xl bg-primary text-xs font-semibold py-1.5 cursor-pointer text-white"
+                        >
+                          {registeringId === program.id ? 'Mendaftar...' : 'Daftar Aksi'}
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between text-xs border-t border-slate-100/50 pt-2">
-                      <span className="text-slate-400">Status Pendanaan:</span>
-                      <span className="font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Aktif</span>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </section>

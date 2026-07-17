@@ -28,7 +28,7 @@ export const Route = createFileRoute('/dashboard/corporate')({
 
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
-      .select('id, type, status, photo_url, created_at, location, description, user_id, users(email)')
+      .select('id, type, status, photo_url, created_at, location, description, user_id, company_name, users(email)')
       .order('created_at', { ascending: false })
 
     if (programsError)
@@ -96,11 +96,15 @@ function CorporateDashboard() {
   const [rewardType, setRewardType] = useState('Safety Credits/Poin')
   const [rewardValue, setRewardValue] = useState('50000')
   const [focusCategory, setFocusCategory] = useState(taskCategories[0].value)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [errors, setErrors] = useState<{
     companyName?: string
     budget?: string
     location?: string
     rewardValue?: string
+    startDate?: string
+    endDate?: string
   }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -215,6 +219,8 @@ function CorporateDashboard() {
   )
   const activeProgramsCount = programs.length
 
+
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -248,6 +254,16 @@ function CorporateDashboard() {
       newErrors.rewardValue = 'Reward value harus berupa angka lebih besar dari 0'
     }
 
+    if (!startDate) {
+      newErrors.startDate = 'Tanggal mulai wajib diisi'
+    }
+
+    if (!endDate) {
+      newErrors.endDate = 'Tanggal selesai wajib diisi'
+    } else if (startDate && new Date(endDate) < new Date(startDate)) {
+      newErrors.endDate = 'Tanggal selesai tidak boleh sebelum tanggal mulai'
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
@@ -271,6 +287,8 @@ function CorporateDashboard() {
         reward_value: rewardValueNum,
         reward_points: rewardValueNum,
         user_id: session.user.id,
+        start_date: startDate ? new Date(startDate).toISOString() : null,
+        end_date: endDate ? new Date(endDate).toISOString() : null,
       })
 
       if (error) throw error
@@ -281,6 +299,8 @@ function CorporateDashboard() {
       setLocation('')
       setRewardType('Safety Credits/Poin')
       setRewardValue('50000')
+      setStartDate('')
+      setEndDate('')
       setIsFormOpen(false)
 
       // Invalidate routing query to trigger reload
@@ -606,9 +626,24 @@ function CorporateDashboard() {
                                   Lokasi Target: {program.location}
                                 </span>
                               )}
+                              {program.start_date && program.end_date && (
+                                <span className="text-[10px] text-amber-600 font-medium">
+                                  Periode: {new Date(program.start_date).toLocaleDateString('id-ID')} - {new Date(program.end_date).toLocaleDateString('id-ID')}
+                                </span>
+                              )}
                               <span className="text-[10px] text-slate-500 font-medium">
                                 Benefit: {program.reward_type || 'Safety Credits/Poin'} ({program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? '' : 'Rp '}{Number(program.reward_value || 0).toLocaleString('id-ID')}{program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? ' Poin' : ''})
                               </span>
+                              {(() => {
+                                const cost = Math.round(Number(program.reward_value || 0) * 1.12)
+                                const remaining = cost > 0 ? Math.floor(Number(program.budget_rupiah) / cost) : 0
+                                const total = remaining + (program.tasks_funded || 0)
+                                return (
+                                  <span className="text-[10px] text-slate-600 font-semibold">
+                                    Kuota: {program.tasks_funded || 0} Terpakai / {total} Total Slot ({remaining} Sisa)
+                                  </span>
+                                )
+                              })()}
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -654,143 +689,207 @@ function CorporateDashboard() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-8 shadow-xl border border-slate-100"
+              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-xl border border-slate-100 flex flex-col max-h-[90vh]"
             >
               <button
                 onClick={() => {
                   setIsFormOpen(false)
                   setErrors({})
                   setSubmitError('')
+                  setStartDate('')
+                  setEndDate('')
                 }}
-                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-full hover:bg-slate-100 transition-colors"
+                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-full hover:bg-slate-100 transition-colors z-10"
               >
                 <X className="h-5 w-5" />
               </button>
 
-              <h2 className="text-2xl font-bold tracking-tight text-slate-950">
-                Program CSR Baru
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Daftarkan inisiatif CSR baru untuk mendanai relawan.
-              </p>
+              <div className="overflow-y-auto p-8 pr-6 flex-1">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+                  Program CSR Baru
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Daftarkan inisiatif CSR baru untuk mendanai relawan.
+                </p>
 
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Nama Perusahaan / Program
-                  </label>
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. PT Garuda Nusantara"
-                    className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                  />
-                  {errors.companyName && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {errors.companyName}
-                    </p>
-                  )}
-                </div>
+                <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Nama Perusahaan / Program
+                    </label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="e.g. PT Garuda Nusantara"
+                      className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                    />
+                    {errors.companyName && (
+                      <p className="mt-1 text-xs text-red-650">
+                        {errors.companyName}
+                      </p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Fokus Kategori Aksi
-                  </label>
-                  <select
-                    value={focusCategory}
-                    onChange={(e) => setFocusCategory(e.target.value)}
-                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                  >
-                    {taskCategories.map((item) => (
-                      <option key={item.value} value={item.value}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Fokus Kategori Aksi
+                    </label>
+                    <select
+                      value={focusCategory}
+                      onChange={(e) => setFocusCategory(e.target.value)}
+                      className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                    >
+                      {taskCategories.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Lokasi Target Program CSR
-                  </label>
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Taman Hutan Raya Dago / Kali Ciliwung RT 03"
-                    className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                  />
-                  {errors.location && (
-                    <p className="mt-1 text-xs text-red-600">
-                      {errors.location}
-                    </p>
-                  )}
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Lokasi Target Program CSR
+                    </label>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g. Taman Hutan Raya Dago / Kali Ciliwung RT 03"
+                      className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                    />
+                    {errors.location && (
+                      <p className="mt-1 text-xs text-red-650">
+                        {errors.location}
+                      </p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Alokasi Anggaran (Rupiah)
-                  </label>
-                  <div className="relative mt-1">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 text-sm">
-                      Rp
-                    </span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">
+                        Tanggal Mulai
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                      />
+                      {errors.startDate && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.startDate}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">
+                        Tanggal Selesai
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                      />
+                      {errors.endDate && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.endDate}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Alokasi Anggaran (Rupiah)
+                    </label>
+                    <div className="relative mt-1">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-550 text-sm">
+                        Rp
+                      </span>
+                      <input
+                        type="number"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder="e.g. 50000000"
+                        className="block w-full rounded-xl border border-slate-200 pl-10 pr-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                      />
+                    </div>
+                    {errors.budget && (
+                      <p className="mt-1 text-xs text-red-600">{errors.budget}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Tipe Reward
+                    </label>
+                    <div className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
+                      Safety Credits/Poin
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Nilai Reward (Safety Credits)
+                    </label>
                     <input
                       type="number"
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
-                      placeholder="e.g. 50000000"
-                      className="block w-full rounded-xl border border-slate-200 pl-10 pr-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                      value={rewardValue}
+                      onChange={(e) => setRewardValue(e.target.value)}
+                      placeholder="e.g. 50000"
+                      className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     />
+                    <p className="mt-1 text-xs text-slate-400">
+                      Jumlah Safety Credits (Poin) yang akan diberikan kepada warga per laporan tugas yang disetujui.
+                    </p>
+                    {errors.rewardValue && (
+                      <p className="mt-1 text-xs text-red-655">{errors.rewardValue}</p>
+                    )}
                   </div>
-                  {errors.budget && (
-                    <p className="mt-1 text-xs text-red-600">{errors.budget}</p>
+
+                  {budget && rewardValue && !isNaN(Number(budget)) && !isNaN(Number(rewardValue)) && (
+                    <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 text-xs text-slate-600 space-y-2">
+                      <div className="flex justify-between">
+                        <span>Beban per Tugas (Safety Credits):</span>
+                        <span className="font-semibold text-slate-800">Rp {Number(rewardValue).toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Platform Fee (12%):</span>
+                        <span className="font-semibold text-slate-800">Rp {Math.round(Number(rewardValue) * 0.12).toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-slate-200/60 pt-1 text-primary">
+                        <span className="font-medium">Total Beban per Tugas:</span>
+                        <span className="font-bold text-primary">Rp {Math.round(Number(rewardValue) * 1.12).toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-slate-200/60 pt-1 text-amber-600">
+                        <span className="font-medium">Total Kuota Tersedia:</span>
+                        <span className="font-bold text-amber-700">
+                          {Math.round(Number(rewardValue) * 1.12) > 0 
+                            ? Math.floor(Number(budget) / Math.round(Number(rewardValue) * 1.12)) 
+                            : 0} Tugas
+                        </span>
+                      </div>
+                    </div>
                   )}
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Tipe Reward
-                  </label>
-                  <div className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
-                    Safety Credits/Poin
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700">
-                    Nilai Reward (Safety Credits)
-                  </label>
-                  <input
-                    type="number"
-                    value={rewardValue}
-                    onChange={(e) => setRewardValue(e.target.value)}
-                    placeholder="e.g. 50000"
-                    className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                  />
-                  <p className="mt-1 text-xs text-slate-400">
-                    Jumlah Safety Credits (Poin) yang akan diberikan kepada warga per laporan tugas yang disetujui.
-                  </p>
-                  {errors.rewardValue && (
-                    <p className="mt-1 text-xs text-red-650">{errors.rewardValue}</p>
+                  {submitError && (
+                    <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 border border-red-100">
+                      {submitError}
+                    </div>
                   )}
-                </div>
 
-                {submitError && (
-                  <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 border border-red-100">
-                    {submitError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-50 transition-opacity cursor-pointer mt-2"
-                >
-                  {isSubmitting ? 'Menyimpan...' : 'Daftarkan Program'}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-50 transition-opacity cursor-pointer mt-2"
+                  >
+                    {isSubmitting ? 'Menyimpan...' : 'Daftarkan Program'}
+                  </button>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
@@ -841,6 +940,8 @@ function CorporateDashboard() {
           </div>
         </div>
       )}
+
+
     </div>
   )
 }
