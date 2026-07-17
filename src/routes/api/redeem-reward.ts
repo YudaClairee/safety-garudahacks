@@ -30,7 +30,9 @@ export const Route = createFileRoute('/api/redeem-reward')({
 
           if (!token) {
             return new Response(
-              JSON.stringify({ error: 'Anda belum login (Token tidak ditemukan)' }),
+              JSON.stringify({
+                error: 'Anda belum login (Token tidak ditemukan)',
+              }),
               { status: 401, headers: { 'Content-Type': 'application/json' } },
             )
           }
@@ -38,18 +40,23 @@ export const Route = createFileRoute('/api/redeem-reward')({
           const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
             global: {
               headers: {
-                Authorization: `Bearer ${token}`
-              }
+                Authorization: `Bearer ${token}`,
+              },
             },
             auth: {
-              persistSession: false
-            }
+              persistSession: false,
+            },
           })
 
-          const { data: { user }, error: authError } = await userSupabase.auth.getUser(token)
+          const {
+            data: { user },
+            error: authError,
+          } = await userSupabase.auth.getUser(token)
           if (authError || !user) {
             return new Response(
-              JSON.stringify({ error: 'Sesi login tidak valid atau kedaluwarsa' }),
+              JSON.stringify({
+                error: 'Sesi login tidak valid atau kedaluwarsa',
+              }),
               { status: 401, headers: { 'Content-Type': 'application/json' } },
             )
           }
@@ -61,10 +68,10 @@ export const Route = createFileRoute('/api/redeem-reward')({
             .single()
 
           if (userError) {
-            return new Response(
-              JSON.stringify({ error: userError.message }),
-              { status: 500, headers: { 'Content-Type': 'application/json' } },
-            )
+            return new Response(JSON.stringify({ error: userError.message }), {
+              status: 500,
+              headers: { 'Content-Type': 'application/json' },
+            })
           }
 
           const currentPoints = Number(userData?.points || 0)

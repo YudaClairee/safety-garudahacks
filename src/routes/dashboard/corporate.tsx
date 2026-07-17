@@ -20,8 +20,11 @@ import {
 
 export const Route = createFileRoute('/dashboard/corporate')({
   loader: async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { programs: [], tasks: [], companyName: 'Perusahaan CSR' }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session)
+      return { programs: [], tasks: [], companyName: 'Perusahaan CSR' }
 
     const { data: userProfile } = await supabase
       .from('users')
@@ -37,16 +40,21 @@ export const Route = createFileRoute('/dashboard/corporate')({
 
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
-      .select('id, type, status, photo_url, created_at, location, description, user_id, company_name, latitude, longitude, captured_at, users(email)')
+      .select(
+        'id, type, status, photo_url, created_at, location, description, user_id, company_name, latitude, longitude, captured_at, users(email)',
+      )
       .order('created_at', { ascending: false })
 
     if (programsError)
       console.error('Error fetching CSR programs:', programsError)
     if (tasksError) console.error('Error fetching tasks:', tasksError)
 
-    const myCompanyNames = (programsData || []).map((p: any) => p.company_name).filter(Boolean)
-    const filteredTasks = (tasksData || []).filter((task: any) => 
-      task.status === 'pending' || myCompanyNames.includes(task.company_name)
+    const myCompanyNames = (programsData || [])
+      .map((p: any) => p.company_name)
+      .filter(Boolean)
+    const filteredTasks = (tasksData || []).filter(
+      (task: any) =>
+        task.status === 'pending' || myCompanyNames.includes(task.company_name),
     )
 
     return {
@@ -59,7 +67,11 @@ export const Route = createFileRoute('/dashboard/corporate')({
 })
 
 function CorporateDashboard() {
-  const { programs, tasks, companyName: loggedCompanyName } = Route.useLoaderData()
+  const {
+    programs,
+    tasks,
+    companyName: loggedCompanyName,
+  } = Route.useLoaderData()
   const router = useRouter()
 
   const [isSimulating, setIsSimulating] = useState(false)
@@ -84,7 +96,9 @@ function CorporateDashboard() {
       if (error) throw error
       router.invalidate() // Reload data
     } catch (err) {
-      alert(`Gagal menghapus program: ${err instanceof Error ? err.message : String(err)}`)
+      alert(
+        `Gagal menghapus program: ${err instanceof Error ? err.message : String(err)}`,
+      )
     }
   }
 
@@ -96,13 +110,17 @@ function CorporateDashboard() {
       })
       const data = await res.json()
       if (res.ok) {
-        alert(`Simulasi Webhook sukses! ${data.message || ''}\nJumlah tugas diproses: ${data.processedCount || 0}`)
+        alert(
+          `Simulasi Webhook sukses! ${data.message || ''}\nJumlah tugas diproses: ${data.processedCount || 0}`,
+        )
         router.invalidate() // Refetch data
       } else {
         alert(`Gagal menjalankan simulasi: ${data.error || 'Unknown error'}`)
       }
     } catch (err) {
-      alert(`Terjadi kesalahan: ${err instanceof Error ? err.message : String(err)}`)
+      alert(
+        `Terjadi kesalahan: ${err instanceof Error ? err.message : String(err)}`,
+      )
     } finally {
       setIsSimulating(false)
     }
@@ -111,7 +129,7 @@ function CorporateDashboard() {
   // Form states
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [companyName, setCompanyName] = useState(loggedCompanyName || '')
-  
+
   useEffect(() => {
     if (loggedCompanyName) {
       setCompanyName(loggedCompanyName)
@@ -159,10 +177,15 @@ function CorporateDashboard() {
         .select('points')
         .eq('id', task.user_id)
         .single()
-      if (userFetchError) throw new Error(`Gagal mengambil data relawan: ${userFetchError.message}`)
+      if (userFetchError)
+        throw new Error(
+          `Gagal mengambil data relawan: ${userFetchError.message}`,
+        )
 
       // 2. Fetch the company owner's programs
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session) throw new Error('Sesi login tidak valid')
 
       // Find programs that belong to the current company user
@@ -172,22 +195,29 @@ function CorporateDashboard() {
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: true })
 
-      if (programFetchError) throw new Error(`Gagal mengambil program CSR: ${programFetchError.message}`)
+      if (programFetchError)
+        throw new Error(
+          `Gagal mengambil program CSR: ${programFetchError.message}`,
+        )
 
       // Find matching program with enough budget (budget >= reward_value * 1.12)
       let targetProgram = allPrograms?.find(
-        (p) => p.focus_category === task.type && Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12
+        (p) =>
+          p.focus_category === task.type &&
+          Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12,
       )
 
       if (!targetProgram) {
         // Fallback: search for any program of this company with enough budget
         targetProgram = allPrograms?.find(
-          (p) => Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12
+          (p) => Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12,
         )
       }
 
       if (!targetProgram) {
-        throw new Error('Anda tidak memiliki program CSR aktif dengan sisa anggaran mencukupi untuk mendanai tugas ini (Dibutuhkan: Nilai Reward + 12% Platform Fee).')
+        throw new Error(
+          'Anda tidak memiliki program CSR aktif dengan sisa anggaran mencukupi untuk mendanai tugas ini (Dibutuhkan: Nilai Reward + 12% Platform Fee).',
+        )
       }
 
       const costPerTask = Math.round(Number(targetProgram.reward_value) * 1.12)
@@ -204,29 +234,40 @@ function CorporateDashboard() {
         .from('users')
         .update({ points: newPoints })
         .eq('id', task.user_id)
-      if (userUpdateError) throw new Error(`Gagal memperbarui poin warga: ${userUpdateError.message}`)
+      if (userUpdateError)
+        throw new Error(
+          `Gagal memperbarui poin warga: ${userUpdateError.message}`,
+        )
 
       const { error: programUpdateError } = await supabase
         .from('csr_programs')
         .update({
           budget_rupiah: newBudget,
-          tasks_funded: newTasksFunded
+          tasks_funded: newTasksFunded,
         })
         .eq('id', targetProgram.id)
-      if (programUpdateError) throw new Error(`Gagal memotong anggaran CSR: ${programUpdateError.message}`)
+      if (programUpdateError)
+        throw new Error(
+          `Gagal memotong anggaran CSR: ${programUpdateError.message}`,
+        )
 
       const { error: taskUpdateError } = await supabase
         .from('tasks')
-        .update({ 
+        .update({
           status: 'approved',
           company_name: targetProgram.company_name,
           reward_type: targetProgram.reward_type,
           reward_value: targetProgram.reward_value,
         })
         .eq('id', task.id)
-      if (taskUpdateError) throw new Error(`Gagal memperbarui status tugas: ${taskUpdateError.message}`)
+      if (taskUpdateError)
+        throw new Error(
+          `Gagal memperbarui status tugas: ${taskUpdateError.message}`,
+        )
 
-      alert(`Tugas sukses disetujui! Didanai oleh "${targetProgram.company_name}". Relawan mendapat ${rewardPointsAwarded.toLocaleString('id-ID')} poin.`)
+      alert(
+        `Tugas sukses disetujui! Didanai oleh "${targetProgram.company_name}". Relawan mendapat ${rewardPointsAwarded.toLocaleString('id-ID')} poin.`,
+      )
       router.invalidate()
     } catch (err: any) {
       alert(`Gagal memproses verifikasi: ${err.message || String(err)}`)
@@ -246,8 +287,6 @@ function CorporateDashboard() {
   )
   const activeProgramsCount = programs.length
 
-
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -263,9 +302,11 @@ function CorporateDashboard() {
     'Mengelola sampah',
   ]
 
-  const approvedTasks = tasks.filter(task => task.status === 'approved')
-  const totalVolunteersHelped = new Set(approvedTasks.map(task => task.user_id)).size
-  const mitigationSuccessCount = approvedTasks.filter(task =>
+  const approvedTasks = tasks.filter((task) => task.status === 'approved')
+  const totalVolunteersHelped = new Set(
+    approvedTasks.map((task) => task.user_id),
+  ).size
+  const mitigationSuccessCount = approvedTasks.filter((task) =>
     mitigationCategories.includes(task.type),
   ).length
   const estimatedHouseholdImpact = totalVolunteersHelped * 3.9
@@ -280,7 +321,10 @@ function CorporateDashboard() {
       }
     } else {
       const myCompanyNames = programs.map((p) => p.company_name)
-      if (task.status === 'approved' && !myCompanyNames.includes(task.company_name)) {
+      if (
+        task.status === 'approved' &&
+        !myCompanyNames.includes(task.company_name)
+      ) {
         return false
       }
     }
@@ -312,7 +356,7 @@ function CorporateDashboard() {
   const workAreas = Array.from(
     new Set(
       approvedTasks
-        .map(task => categoryToWorkArea[task.type])
+        .map((task) => categoryToWorkArea[task.type])
         .filter(Boolean),
     ),
   )
@@ -321,27 +365,35 @@ function CorporateDashboard() {
     {
       label: 'Total Warga Terbantu',
       value: totalVolunteersHelped.toLocaleString('id-ID'),
-      description: 'Jumlah relawan penerima Safety Net tunai yang aksi relawannya telah disetujui.',
+      description:
+        'Jumlah relawan penerima Safety Net tunai yang aksi relawannya telah disetujui.',
     },
     {
       label: 'Aksi Mitigasi Berhasil',
       value: mitigationSuccessCount.toString(),
-      description: 'Total tugas mitigasi kebencanaan fisik & kebersihan lingkungan yang disetujui.',
+      description:
+        'Total tugas mitigasi kebencanaan fisik & kebersihan lingkungan yang disetujui.',
     },
     {
       label: 'Estimasi Anggota Keluarga Terbantu',
       value: estimatedHouseholdImpact.toFixed(0),
-      description: 'Dampak tidak langsung berdasarkan BPS Index (Rata-rata 3,9 anggota keluarga per rumah tangga).',
+      description:
+        'Dampak tidak langsung berdasarkan BPS Index (Rata-rata 3,9 anggota keluarga per rumah tangga).',
     },
     {
       label: 'Skor ESG',
       value: String(
         Math.min(
           100,
-          70 + Math.round((mitigationSuccessCount / Math.max(1, approvedTasks.length)) * 15) + Math.min(15, totalVolunteersHelped),
+          70 +
+            Math.round(
+              (mitigationSuccessCount / Math.max(1, approvedTasks.length)) * 15,
+            ) +
+            Math.min(15, totalVolunteersHelped),
         ),
       ),
-      description: 'Skor performa CSR (Baseline kepatuhan 70 + rasio efisiensi mitigasi lingkungan + jangkauan relawan).',
+      description:
+        'Skor performa CSR (Baseline kepatuhan 70 + rasio efisiensi mitigasi lingkungan + jangkauan relawan).',
     },
   ]
 
@@ -354,14 +406,22 @@ function CorporateDashboard() {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;')
 
-    const activityRows = approvedTasks.slice(0, 10).map((task) => {
-      const userEmail = Array.isArray(task.users) ? (task.users as any)[0]?.email : (task.users as any)?.email
-      const email = escapeHtml(userEmail ?? 'Relawan Anonim')
-      const category = escapeHtml(getTaskCategory(task.type)?.label ?? task.type)
-      const createdAt = escapeHtml(new Date(task.created_at).toLocaleDateString('id-ID'))
-      const location = escapeHtml(task.location || '-')
-      const status = escapeHtml(task.status)
-      return `
+    const activityRows = approvedTasks
+      .slice(0, 10)
+      .map((task) => {
+        const userEmail = Array.isArray(task.users)
+          ? (task.users as any)[0]?.email
+          : (task.users as any)?.email
+        const email = escapeHtml(userEmail ?? 'Relawan Anonim')
+        const category = escapeHtml(
+          getTaskCategory(task.type)?.label ?? task.type,
+        )
+        const createdAt = escapeHtml(
+          new Date(task.created_at).toLocaleDateString('id-ID'),
+        )
+        const location = escapeHtml(task.location || '-')
+        const status = escapeHtml(task.status)
+        return `
         <tr>
           <td>${email}</td>
           <td>${category}</td>
@@ -370,9 +430,12 @@ function CorporateDashboard() {
           <td>${createdAt}</td>
         </tr>
       `
-    }).join('')
+      })
+      .join('')
 
-    const workAreaBadges = workAreas.map((area) => `<span class="badge">${escapeHtml(area)}</span>`).join('')
+    const workAreaBadges = workAreas
+      .map((area) => `<span class="badge">${escapeHtml(area)}</span>`)
+      .join('')
 
     const reportHtml = `
       <html>
@@ -424,13 +487,17 @@ function CorporateDashboard() {
           <div class="section">
             <h2>Metrik ESG</h2>
             <div class="metric-grid">
-              ${esgMetrics.map(metric => `
+              ${esgMetrics
+                .map(
+                  (metric) => `
                 <div class="metric-card">
                   <div class="metric-title">${escapeHtml(metric.label)}</div>
                   <div class="metric-value">${escapeHtml(metric.value)}</div>
                   <div class="metric-desc">${escapeHtml(metric.description)}</div>
                 </div>
-              `).join('')}
+              `,
+                )
+                .join('')}
             </div>
           </div>
 
@@ -464,9 +531,15 @@ function CorporateDashboard() {
       </html>
     `
 
-    const reportWindow = window.open('', '_blank', 'toolbar=no,scrollbars=yes,resizable=yes,width=900,height=900')
+    const reportWindow = window.open(
+      '',
+      '_blank',
+      'toolbar=no,scrollbars=yes,resizable=yes,width=900,height=900',
+    )
     if (!reportWindow) {
-      alert('Tidak dapat membuka jendela baru untuk mengekspor laporan. Izinkan popup pada browser Anda.')
+      alert(
+        'Tidak dapat membuka jendela baru untuk mengekspor laporan. Izinkan popup pada browser Anda.',
+      )
       return
     }
 
@@ -497,7 +570,8 @@ function CorporateDashboard() {
 
     const rewardValueNum = Number(rewardValue)
     if (!rewardValue || isNaN(rewardValueNum) || rewardValueNum <= 0) {
-      newErrors.rewardValue = 'Reward value harus berupa angka lebih besar dari 0'
+      newErrors.rewardValue =
+        'Reward value harus berupa angka lebih besar dari 0'
     }
 
     if (!startDate) {
@@ -520,7 +594,9 @@ function CorporateDashboard() {
     setSubmitError('')
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session) throw new Error('Sesi login tidak valid')
 
       const { error } = await supabase.from('csr_programs').insert({
@@ -587,7 +663,11 @@ function CorporateDashboard() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-10 w-auto object-contain" />
+              <img
+                src="/logojalan-transparant.png"
+                alt="Jalan Logo"
+                className="h-10 w-auto object-contain"
+              />
               <span className="text-xl font-bold tracking-tight text-primary">
                 {loggedCompanyName}
               </span>
@@ -614,7 +694,10 @@ function CorporateDashboard() {
           className="space-y-8"
         >
           {/* Header */}
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <motion.div
+            variants={itemVariants}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
             <div>
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
                 Dashboard CSR
@@ -728,10 +811,15 @@ function CorporateDashboard() {
           <section className="rounded-[2rem] border border-slate-200 bg-sky-50/95 p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-sky-700/80">ESG Impact</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Metrik Keberlanjutan & Area Kerja</h2>
+                <p className="text-xs uppercase tracking-[0.3em] text-sky-700/80">
+                  ESG Impact
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+                  Metrik Keberlanjutan & Area Kerja
+                </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-                  Ringkasan metrik ESG yang menunjukkan dampak sosial, lingkungan, dan tata kelola dari program CSR Anda.
+                  Ringkasan metrik ESG yang menunjukkan dampak sosial,
+                  lingkungan, dan tata kelola dari program CSR Anda.
                 </p>
               </div>
               <button
@@ -745,10 +833,19 @@ function CorporateDashboard() {
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {esgMetrics.map((metric) => (
-                <div key={metric.label} className="rounded-[1.75rem] border border-sky-200 bg-white p-5 shadow-sm">
-                  <p className="text-sm font-semibold text-slate-900">{metric.label}</p>
-                  <p className="mt-3 text-3xl font-bold tracking-tight text-sky-800">{metric.value}</p>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{metric.description}</p>
+                <div
+                  key={metric.label}
+                  className="rounded-[1.75rem] border border-sky-200 bg-white p-5 shadow-sm"
+                >
+                  <p className="text-sm font-semibold text-slate-900">
+                    {metric.label}
+                  </p>
+                  <p className="mt-3 text-3xl font-bold tracking-tight text-sky-800">
+                    {metric.value}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    {metric.description}
+                  </p>
                 </div>
               ))}
             </div>
@@ -758,28 +855,38 @@ function CorporateDashboard() {
               <div className="mt-3 flex flex-wrap gap-2">
                 {workAreas.length > 0 ? (
                   workAreas.map((area) => (
-                    <span key={area} className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-900">
+                    <span
+                      key={area}
+                      className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-900"
+                    >
                       {area}
                     </span>
                   ))
                 ) : (
-                  <span className="text-sm text-slate-500">Tidak ada area kerja yang teridentifikasi.</span>
+                  <span className="text-sm text-slate-500">
+                    Tidak ada area kerja yang teridentifikasi.
+                  </span>
                 )}
               </div>
             </div>
           </section>
 
           {/* Section Peta Dampak Geospasial */}
-          <motion.section 
-            variants={itemVariants} 
+          <motion.section
+            variants={itemVariants}
             className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm space-y-6"
           >
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary">Analisis Dampak Spasial</p>
-                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Peta & Heatmap Sebaran Safety Nets</h2>
+                <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary">
+                  Analisis Dampak Spasial
+                </p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                  Peta & Heatmap Sebaran Safety Nets
+                </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Visualisasikan wilayah kontribusi aksi relawan dan jangkauan jaring pengaman sosial dari dana CSR Anda.
+                  Visualisasikan wilayah kontribusi aksi relawan dan jangkauan
+                  jaring pengaman sosial dari dana CSR Anda.
                 </p>
               </div>
 
@@ -787,13 +894,17 @@ function CorporateDashboard() {
               <div className="flex flex-wrap items-center gap-3">
                 {/* Program selector */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Program CSR</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">
+                    Program CSR
+                  </label>
                   <select
                     value={mapProgramId}
                     onChange={(e) => setMapProgramId(e.target.value)}
                     className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-primary focus:bg-white cursor-pointer"
                   >
-                    <option value="all">Semua Program ({programs.length})</option>
+                    <option value="all">
+                      Semua Program ({programs.length})
+                    </option>
                     {programs.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.focus_category} ({p.company_name})
@@ -804,7 +915,9 @@ function CorporateDashboard() {
 
                 {/* Category selector */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Kategori Aksi</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">
+                    Kategori Aksi
+                  </label>
                   <select
                     value={mapCategory}
                     onChange={(e) => setMapCategory(e.target.value)}
@@ -821,7 +934,9 @@ function CorporateDashboard() {
 
                 {/* Status selector */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Status Tugas</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">
+                    Status Tugas
+                  </label>
                   <select
                     value={mapStatus}
                     onChange={(e) => setMapStatus(e.target.value)}
@@ -837,7 +952,11 @@ function CorporateDashboard() {
 
             {/* Map Element */}
             <div className="overflow-hidden rounded-2xl border border-slate-200">
-              <HeatmapMap mode="heatmap" tasks={filteredMapTasks} height="420px" />
+              <HeatmapMap
+                mode="heatmap"
+                tasks={filteredMapTasks}
+                height="420px"
+              />
             </div>
 
             {/* Map Summary Info */}
@@ -845,15 +964,28 @@ function CorporateDashboard() {
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <strong>{filteredMapTasks.filter(t => t.status === 'approved').length}</strong> Aksi Disetujui
+                  <strong>
+                    {
+                      filteredMapTasks.filter((t) => t.status === 'approved')
+                        .length
+                    }
+                  </strong>{' '}
+                  Aksi Disetujui
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  <strong>{filteredMapTasks.filter(t => t.status === 'pending').length}</strong> Aksi Pending
+                  <strong>
+                    {
+                      filteredMapTasks.filter((t) => t.status === 'pending')
+                        .length
+                    }
+                  </strong>{' '}
+                  Aksi Pending
                 </span>
               </div>
               <div>
-                Menampilkan <strong>{filteredMapTasks.length}</strong> titik koordinat dari program aktif.
+                Menampilkan <strong>{filteredMapTasks.length}</strong> titik
+                koordinat dari program aktif.
               </div>
             </div>
           </motion.section>
@@ -897,7 +1029,10 @@ function CorporateDashboard() {
                           )}
                           <div className="flex flex-col gap-1">
                             <span className="font-medium text-slate-900 text-sm sm:text-base">
-                              {(Array.isArray(task.users) ? (task.users as any)[0]?.email : (task.users as any)?.email) || 'Relawan Anonim'}
+                              {(Array.isArray(task.users)
+                                ? (task.users as any)[0]?.email
+                                : (task.users as any)?.email) ||
+                                'Relawan Anonim'}
                             </span>
                             <span className="text-sm text-slate-550 font-medium">
                               {getTaskCategory(task.type)?.label ?? task.type}
@@ -907,12 +1042,26 @@ function CorporateDashboard() {
                                 Lokasi: {task.location}
                               </span>
                             )}
-                            {task.latitude !== null && task.longitude !== null && task.latitude !== undefined && task.longitude !== undefined && (
-                              <span className="text-xs text-slate-550 font-medium flex items-center gap-1">
-                                <MapPin className="h-3 w-3 text-primary" />
-                                <span>GPS: <a href={`https://www.google.com/maps?q=${task.latitude},${task.longitude}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">{Number(task.latitude).toFixed(5)}, {Number(task.longitude).toFixed(5)}</a></span>
-                              </span>
-                            )}
+                            {task.latitude !== null &&
+                              task.longitude !== null &&
+                              task.latitude !== undefined &&
+                              task.longitude !== undefined && (
+                                <span className="text-xs text-slate-550 font-medium flex items-center gap-1">
+                                  <MapPin className="h-3 w-3 text-primary" />
+                                  <span>
+                                    GPS:{' '}
+                                    <a
+                                      href={`https://www.google.com/maps?q=${task.latitude},${task.longitude}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary hover:underline font-semibold"
+                                    >
+                                      {Number(task.latitude).toFixed(5)},{' '}
+                                      {Number(task.longitude).toFixed(5)}
+                                    </a>
+                                  </span>
+                                </span>
+                              )}
                             {task.description && (
                               <span className="text-xs text-slate-400 italic">
                                 "{task.description}"
@@ -925,14 +1074,18 @@ function CorporateDashboard() {
                             {task.status === 'pending' ? (
                               <div className="flex items-center gap-1.5">
                                 <button
-                                  onClick={() => handleVerifyTask(task, 'approved')}
+                                  onClick={() =>
+                                    handleVerifyTask(task, 'approved')
+                                  }
                                   disabled={isVerifying === task.id}
                                   className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition duration-150 cursor-pointer disabled:opacity-50"
                                 >
                                   Setuju
                                 </button>
                                 <button
-                                  onClick={() => handleVerifyTask(task, 'rejected')}
+                                  onClick={() =>
+                                    handleVerifyTask(task, 'rejected')
+                                  }
                                   disabled={isVerifying === task.id}
                                   className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 transition duration-150 cursor-pointer disabled:opacity-50"
                                 >
@@ -953,12 +1106,32 @@ function CorporateDashboard() {
                           </div>
                           <div className="flex flex-col items-end gap-1">
                             <span className="text-[11px] text-slate-400">
-                              Lapor: {new Date(task.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              Lapor:{' '}
+                              {new Date(task.created_at).toLocaleString(
+                                'id-ID',
+                                {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                },
+                              )}
                             </span>
                             {task.captured_at && (
                               <span className="text-[9px] text-slate-500 font-semibold bg-slate-50 border border-slate-200/60 rounded-full px-2 py-0.5 flex items-center gap-1">
                                 <Clock className="h-2.5 w-2.5 text-primary" />
-                                <span>Foto: {new Date(task.captured_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>
+                                  Foto:{' '}
+                                  {new Date(task.captured_at).toLocaleString(
+                                    'id-ID',
+                                    {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    },
+                                  )}
+                                </span>
                               </span>
                             )}
                           </div>
@@ -1021,19 +1194,56 @@ function CorporateDashboard() {
                               )}
                               {program.start_date && program.end_date && (
                                 <span className="text-[10px] text-amber-600 font-medium">
-                                  Periode: {new Date(program.start_date).toLocaleDateString('id-ID')} - {new Date(program.end_date).toLocaleDateString('id-ID')}
+                                  Periode:{' '}
+                                  {new Date(
+                                    program.start_date,
+                                  ).toLocaleDateString('id-ID')}{' '}
+                                  -{' '}
+                                  {new Date(
+                                    program.end_date,
+                                  ).toLocaleDateString('id-ID')}
                                 </span>
                               )}
                               <span className="text-[10px] text-slate-500 font-medium">
-                                Benefit: {program.reward_type || 'Safety Credits/Poin'} ({program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? '' : 'Rp '}{Number(program.reward_value || 0).toLocaleString('id-ID')}{program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? ' Poin' : ''})
+                                Benefit:{' '}
+                                {program.reward_type || 'Safety Credits/Poin'} (
+                                {program.reward_type
+                                  ?.toLowerCase()
+                                  .includes('poin') ||
+                                program.reward_type
+                                  ?.toLowerCase()
+                                  .includes('credit')
+                                  ? ''
+                                  : 'Rp '}
+                                {Number(
+                                  program.reward_value || 0,
+                                ).toLocaleString('id-ID')}
+                                {program.reward_type
+                                  ?.toLowerCase()
+                                  .includes('poin') ||
+                                program.reward_type
+                                  ?.toLowerCase()
+                                  .includes('credit')
+                                  ? ' Poin'
+                                  : ''}
+                                )
                               </span>
                               {(() => {
-                                const cost = Math.round(Number(program.reward_value || 0) * 1.12)
-                                const remaining = cost > 0 ? Math.floor(Number(program.budget_rupiah) / cost) : 0
-                                const total = remaining + (program.tasks_funded || 0)
+                                const cost = Math.round(
+                                  Number(program.reward_value || 0) * 1.12,
+                                )
+                                const remaining =
+                                  cost > 0
+                                    ? Math.floor(
+                                        Number(program.budget_rupiah) / cost,
+                                      )
+                                    : 0
+                                const total =
+                                  remaining + (program.tasks_funded || 0)
                                 return (
                                   <span className="text-[10px] text-slate-600 font-semibold">
-                                    Kuota: {program.tasks_funded || 0} Terpakai / {total} Total Slot ({remaining} Sisa)
+                                    Kuota: {program.tasks_funded || 0} Terpakai
+                                    / {total} Total Slot ({remaining} Sisa)
                                   </span>
                                 )
                               })()}
@@ -1053,7 +1263,15 @@ function CorporateDashboard() {
                           </div>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
-                          <span>{program.tasks_funded} Tugas didanai ({Number(program.reward_value || program.reward_points || 0).toLocaleString('id-ID')} Safety Credits)</span>
+                          <span>
+                            {program.tasks_funded} Tugas didanai (
+                            {Number(
+                              program.reward_value ||
+                                program.reward_points ||
+                                0,
+                            ).toLocaleString('id-ID')}{' '}
+                            Safety Credits)
+                          </span>
                           <span>
                             {new Date(program.created_at).toLocaleDateString(
                               'id-ID',
@@ -1211,7 +1429,9 @@ function CorporateDashboard() {
                       />
                     </div>
                     {errors.budget && (
-                      <p className="mt-1 text-xs text-red-600">{errors.budget}</p>
+                      <p className="mt-1 text-xs text-red-600">
+                        {errors.budget}
+                      </p>
                     )}
                   </div>
 
@@ -1236,37 +1456,63 @@ function CorporateDashboard() {
                       className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                     />
                     <p className="mt-1 text-xs text-slate-400">
-                      Jumlah Safety Credits (Poin) yang akan diberikan kepada warga per laporan tugas yang disetujui.
+                      Jumlah Safety Credits (Poin) yang akan diberikan kepada
+                      warga per laporan tugas yang disetujui.
                     </p>
                     {errors.rewardValue && (
-                      <p className="mt-1 text-xs text-red-655">{errors.rewardValue}</p>
+                      <p className="mt-1 text-xs text-red-655">
+                        {errors.rewardValue}
+                      </p>
                     )}
                   </div>
 
-                  {budget && rewardValue && !isNaN(Number(budget)) && !isNaN(Number(rewardValue)) && (
-                    <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 text-xs text-slate-600 space-y-2">
-                      <div className="flex justify-between">
-                        <span>Beban per Tugas (Safety Credits):</span>
-                        <span className="font-semibold text-slate-800">Rp {Number(rewardValue).toLocaleString('id-ID')}</span>
+                  {budget &&
+                    rewardValue &&
+                    !isNaN(Number(budget)) &&
+                    !isNaN(Number(rewardValue)) && (
+                      <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 text-xs text-slate-600 space-y-2">
+                        <div className="flex justify-between">
+                          <span>Beban per Tugas (Safety Credits):</span>
+                          <span className="font-semibold text-slate-800">
+                            Rp {Number(rewardValue).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Platform Fee (12%):</span>
+                          <span className="font-semibold text-slate-800">
+                            Rp{' '}
+                            {Math.round(
+                              Number(rewardValue) * 0.12,
+                            ).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-200/60 pt-1 text-primary">
+                          <span className="font-medium">
+                            Total Beban per Tugas:
+                          </span>
+                          <span className="font-bold text-primary">
+                            Rp{' '}
+                            {Math.round(
+                              Number(rewardValue) * 1.12,
+                            ).toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-200/60 pt-1 text-amber-600">
+                          <span className="font-medium">
+                            Total Kuota Tersedia:
+                          </span>
+                          <span className="font-bold text-amber-700">
+                            {Math.round(Number(rewardValue) * 1.12) > 0
+                              ? Math.floor(
+                                  Number(budget) /
+                                    Math.round(Number(rewardValue) * 1.12),
+                                )
+                              : 0}{' '}
+                            Tugas
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Platform Fee (12%):</span>
-                        <span className="font-semibold text-slate-800">Rp {Math.round(Number(rewardValue) * 0.12).toLocaleString('id-ID')}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-slate-200/60 pt-1 text-primary">
-                        <span className="font-medium">Total Beban per Tugas:</span>
-                        <span className="font-bold text-primary">Rp {Math.round(Number(rewardValue) * 1.12).toLocaleString('id-ID')}</span>
-                      </div>
-                      <div className="flex justify-between border-t border-slate-200/60 pt-1 text-amber-600">
-                        <span className="font-medium">Total Kuota Tersedia:</span>
-                        <span className="font-bold text-amber-700">
-                          {Math.round(Number(rewardValue) * 1.12) > 0 
-                            ? Math.floor(Number(budget) / Math.round(Number(rewardValue) * 1.12)) 
-                            : 0} Tugas
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                    )}
 
                   {submitError && (
                     <div className="rounded-xl bg-red-50 p-4 text-sm text-red-800 border border-red-100">
@@ -1300,68 +1546,87 @@ function CorporateDashboard() {
             </button>
 
             <h3 className="text-lg font-bold text-slate-955 pr-8 truncate">
-              Bukti Aksi: {getTaskCategory(previewTask.type)?.label ?? previewTask.type}
+              Bukti Aksi:{' '}
+              {getTaskCategory(previewTask.type)?.label ?? previewTask.type}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
               Oleh: {previewTask.users?.email || 'Relawan Anonim'}
             </p>
 
             <div className="mt-4 rounded-2xl overflow-hidden border border-slate-150 aspect-video max-h-[60vh] flex items-center justify-center bg-slate-950">
-              <img 
-                src={previewTask.photo_url} 
-                alt="Aksi Relawan Full Resolution" 
-                className="max-w-full max-h-full object-contain" 
+              <img
+                src={previewTask.photo_url}
+                alt="Aksi Relawan Full Resolution"
+                className="max-w-full max-h-full object-contain"
               />
             </div>
 
             <div className="mt-4 space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-2xl">
               {previewTask.location && (
                 <p className="flex items-start gap-1.5">
-                  <span className="font-bold text-slate-900 shrink-0">Lokasi:</span>
+                  <span className="font-bold text-slate-900 shrink-0">
+                    Lokasi:
+                  </span>
                   <span>{previewTask.location}</span>
                 </p>
               )}
-              {previewTask.latitude !== null && previewTask.longitude !== null && previewTask.latitude !== undefined && previewTask.longitude !== undefined && (
-                <p className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-900 shrink-0">Koordinat GPS:</span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-primary" />
-                    <a
-                      href={`https://www.google.com/maps?q=${previewTask.latitude},${previewTask.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary font-semibold hover:underline"
-                    >
-                      {Number(previewTask.latitude).toFixed(6)}, {Number(previewTask.longitude).toFixed(6)}
-                    </a>
-                  </span>
-                </p>
-              )}
+              {previewTask.latitude !== null &&
+                previewTask.longitude !== null &&
+                previewTask.latitude !== undefined &&
+                previewTask.longitude !== undefined && (
+                  <p className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-900 shrink-0">
+                      Koordinat GPS:
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
+                      <a
+                        href={`https://www.google.com/maps?q=${previewTask.latitude},${previewTask.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary font-semibold hover:underline"
+                      >
+                        {Number(previewTask.latitude).toFixed(6)},{' '}
+                        {Number(previewTask.longitude).toFixed(6)}
+                      </a>
+                    </span>
+                  </p>
+                )}
               {previewTask.description && (
                 <p className="flex items-start gap-1.5">
-                  <span className="font-bold text-slate-900 shrink-0">Deskripsi:</span>
+                  <span className="font-bold text-slate-900 shrink-0">
+                    Deskripsi:
+                  </span>
                   <span className="italic">"{previewTask.description}"</span>
                 </p>
               )}
               <div className="text-xs text-slate-500 mt-2 border-t border-slate-200/60 pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Laporan: {new Date(previewTask.created_at).toLocaleString('id-ID')}</span>
+                  <span>
+                    Laporan:{' '}
+                    {new Date(previewTask.created_at).toLocaleString('id-ID')}
+                  </span>
                 </span>
                 {previewTask.captured_at && (
                   <span className="flex items-center gap-1 text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-medium">
                     <Clock className="h-3 w-3 text-primary" />
-                    <span>Waktu Foto: {new Date(previewTask.captured_at).toLocaleString('id-ID')}</span>
+                    <span>
+                      Waktu Foto:{' '}
+                      {new Date(previewTask.captured_at).toLocaleString(
+                        'id-ID',
+                      )}
+                    </span>
                   </span>
                 )}
-                <span className="capitalize font-semibold text-primary">Status: {previewTask.status}</span>
+                <span className="capitalize font-semibold text-primary">
+                  Status: {previewTask.status}
+                </span>
               </div>
             </div>
           </div>
         </div>
       )}
-
-
     </div>
   )
 }

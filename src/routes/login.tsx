@@ -25,10 +25,11 @@ function LoginPage() {
 
     try {
       if (mode === 'register') {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        })
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email,
+            password,
+          })
 
         if (signUpError) {
           throw signUpError
@@ -40,7 +41,7 @@ function LoginPage() {
             .from('users')
             .update({ role })
             .eq('id', signUpData.user.id)
-          
+
           if (updateError) {
             console.error('Failed to set role:', updateError)
           }
@@ -62,7 +63,7 @@ function LoginPage() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Terjadi kesalahan saat memproses autentikasi.'
+          : 'Terjadi kesalahan saat memproses autentikasi.',
       )
     } finally {
       setLoading(false)
@@ -73,7 +74,11 @@ function LoginPage() {
     <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card/80 p-8 shadow-lg shadow-black/5 backdrop-blur-xl">
         <div className="mb-8 flex flex-col items-center text-center">
-          <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-12 w-auto object-contain mb-2" />
+          <img
+            src="/logojalan-transparant.png"
+            alt="Jalan Logo"
+            className="h-12 w-auto object-contain mb-2"
+          />
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
             {mode === 'login' ? 'Masuk ke akun Anda' : 'Buat akun baru'}
           </h1>
@@ -117,7 +122,10 @@ function LoginPage() {
 
           {mode === 'register' && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="fullName">
+              <label
+                className="mb-2 block text-sm font-medium text-foreground"
+                htmlFor="fullName"
+              >
                 {role === 'warga' ? 'Nama Lengkap' : 'Nama Perusahaan'}
               </label>
               <input
@@ -127,13 +135,20 @@ function LoginPage() {
                 onChange={(event) => setFullName(event.target.value)}
                 required
                 className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                placeholder={role === 'warga' ? 'Nama Lengkap Anda' : 'Nama Perusahaan Anda'}
+                placeholder={
+                  role === 'warga'
+                    ? 'Nama Lengkap Anda'
+                    : 'Nama Perusahaan Anda'
+                }
               />
             </div>
           )}
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="email">
+            <label
+              className="mb-2 block text-sm font-medium text-foreground"
+              htmlFor="email"
+            >
               Email
             </label>
             <input
@@ -148,7 +163,10 @@ function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="password">
+            <label
+              className="mb-2 block text-sm font-medium text-foreground"
+              htmlFor="password"
+            >
               Password
             </label>
             <input

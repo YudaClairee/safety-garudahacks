@@ -20,8 +20,7 @@ export const taskCategories: TaskCategoryOption[] = [
   {
     value: 'Menanam pohon',
     label: 'Menanam Pohon (Pencegahan Erors/Longsor)',
-    description:
-      'Penghijauan di area resapan air atau lahan rawan erosi.',
+    description: 'Penghijauan di area resapan air atau lahan rawan erosi.',
   },
   {
     value: 'Mengelola sampah',
@@ -44,8 +43,7 @@ export const taskCategories: TaskCategoryOption[] = [
   {
     value: 'Kegiatan sosial lainnya',
     label: 'Aksi Keselamatan Komunitas Lainnya',
-    description:
-      'Inisiatif aksi warga untuk keselamatan lingkungan sekitar.',
+    description: 'Inisiatif aksi warga untuk keselamatan lingkungan sekitar.',
   },
 ]
 

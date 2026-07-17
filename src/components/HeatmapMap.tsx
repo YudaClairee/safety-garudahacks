@@ -1,4 +1,5 @@
-import { useEffect, useState, ComponentType } from 'react'
+import { useEffect, useState } from 'react'
+import type { ComponentType } from 'react'
 
 interface MapTask {
   id: string
@@ -20,7 +21,9 @@ interface HeatmapMapProps {
 }
 
 export default function HeatmapMap(props: HeatmapMapProps) {
-  const [MapComponent, setMapComponent] = useState<ComponentType<any> | null>(null)
+  const [MapComponent, setMapComponent] = useState<ComponentType<any> | null>(
+    null,
+  )
 
   useEffect(() => {
     // Only import ClientMap on the client side to avoid window is not defined SSR issues
@@ -35,12 +38,14 @@ export default function HeatmapMap(props: HeatmapMapProps) {
 
   if (!MapComponent) {
     return (
-      <div 
-        style={{ height: props.height || '400px' }} 
+      <div
+        style={{ height: props.height || '400px' }}
         className="w-full bg-slate-100/70 border border-slate-200/80 rounded-2xl flex flex-col items-center justify-center text-slate-500 gap-3"
       >
         <div className="h-7 w-7 rounded-full border-2 border-slate-300 border-t-primary animate-spin" />
-        <span className="text-xs font-bold tracking-wide text-slate-400">Menyiapkan Visualisasi Peta...</span>
+        <span className="text-xs font-bold tracking-wide text-slate-400">
+          Menyiapkan Visualisasi Peta...
+        </span>
       </div>
     )
   }

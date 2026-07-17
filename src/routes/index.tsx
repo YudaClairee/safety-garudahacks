@@ -105,11 +105,12 @@ function Home() {
       {/* Navigation Header */}
       <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/70 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-950/70">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 tracking-tight"
-          >
-            <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-10 w-auto object-contain" />
+          <Link to="/" className="flex items-center gap-2.5 tracking-tight">
+            <img
+              src="/logojalan-transparant.png"
+              alt="Jalan Logo"
+              className="h-10 w-auto object-contain"
+            />
             <div className="flex flex-col leading-tight">
               <span className="font-bold text-lg text-sky-900 dark:text-sky-400">
                 Jalan
@@ -303,7 +304,8 @@ function Home() {
                   Bukti Foto
                 </span>
                 <p className="mt-2 text-xs text-slate-655 dark:text-slate-350">
-                  Setiap aksi warga wajib melampirkan foto bukti lokasi sebelum disetujui.
+                  Setiap aksi warga wajib melampirkan foto bukti lokasi sebelum
+                  disetujui.
                 </p>
               </div>
             </div>
@@ -321,7 +323,8 @@ function Home() {
                   Real-Time
                 </span>
                 <p className="mt-2 text-xs text-slate-655 dark:text-slate-350">
-                  Webhook menyetujui tugas, memotong dana CSR & menambah poin warga seketika.
+                  Webhook menyetujui tugas, memotong dana CSR & menambah poin
+                  warga seketika.
                 </p>
               </div>
             </div>
@@ -500,7 +503,11 @@ function Home() {
       <footer className="border-t border-slate-200 bg-white py-16 dark:border-slate-900 dark:bg-slate-950">
         <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-center gap-2.5">
-            <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-9 w-auto object-contain" />
+            <img
+              src="/logojalan-transparant.png"
+              alt="Jalan Logo"
+              className="h-9 w-auto object-contain"
+            />
             <div className="flex flex-col leading-tight text-left">
               <span className="font-bold text-base text-slate-850 dark:text-white">
                 Jalan
