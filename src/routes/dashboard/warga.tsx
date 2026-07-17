@@ -4,6 +4,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { LogOut, Gift, X, Image as ImageIcon, CheckCircle2 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
+import { getTaskCategory, taskCategories } from '@/lib/task-categories'
 import { Button } from '@/components/ui/button'
 
 type TaskStatus = 'Pending' | 'Approved'
@@ -62,16 +63,6 @@ export const Route = createFileRoute('/dashboard/warga')({
   },
   component: WargaRoute
 })
-
-const taskCategories = [
-  'Membersihkan lingkungan',
-  'Membantu tetangga lansia',
-  'Menanam pohon',
-  'Mengelola sampah',
-  'Mengajar anak-anak',
-  'Donasi makanan',
-  'Kegiatan sosial lainnya',
-]
 
 const rewards = [
   { id: '1', name: 'Saldo GoPay Rp 25.000', cost: 10000, provider: 'GoPay' },
@@ -174,13 +165,16 @@ function WargaRoute() {
       
       if (insertError) throw insertError
 
-      setMessage(`Laporan untuk kategori "${category}" telah berhasil dikirim.`)
+      const selectedCategory = getTaskCategory(category)
+      setMessage(
+        `Laporan untuk kategori "${selectedCategory?.label ?? category}" telah berhasil dikirim.`,
+      )
       setPhoto(null)
       setPhotoPreview(null)
       setLocation('')
       setDescription('')
       setSelectedProgramId('general')
-      setCategory(taskCategories[0])
+      setCategory(taskCategories[0].value)
       
       // Invalidate to refresh loader data
       router.invalidate()
@@ -305,19 +299,49 @@ function WargaRoute() {
                 <label htmlFor="category" className="block text-sm font-medium text-foreground">
                   Kategori Tugas
                 </label>
-                <select
-                  id="category"
-                  value={category}
-                  disabled={selectedProgramId !== 'general'}
-                  onChange={(event) => setCategory(event.target.value)}
-                  className="w-full rounded-2xl border border-border bg-background disabled:bg-slate-100 disabled:text-slate-550 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  {taskCategories.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid gap-3">
+                  {taskCategories.map((item) => {
+                    const isSelected = category === item.value
+                    const isDisabled = selectedProgramId !== 'general'
+
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => setCategory(item.value)}
+                        className={`w-full rounded-2xl border px-4 py-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                          isSelected
+                            ? 'border-primary bg-primary/5 shadow-sm'
+                            : 'border-border bg-background hover:border-primary/40 hover:bg-slate-50'
+                        } ${
+                          isDisabled ? 'cursor-not-allowed opacity-60 hover:bg-background' : ''
+                        }`}
+                        aria-pressed={isSelected}
+                        aria-disabled={isDisabled}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-foreground">
+                              {item.label}
+                            </p>
+                            <p className="text-xs leading-5 text-muted-foreground">
+                              {item.description}
+                            </p>
+                          </div>
+                          <div
+                            className={`mt-1 h-4 w-4 rounded-full border-2 ${
+                              isSelected
+                                ? 'border-primary bg-primary'
+                                : 'border-slate-300 bg-white'
+                            }`}
+                            aria-hidden="true"
+                          />
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
                 {selectedProgramId !== 'general' && (
                   <p className="text-[11px] text-slate-500 italic mt-1">
                     *Kategori dikunci secara otomatis sesuai fokus CSR sponsor yang Anda pilih.

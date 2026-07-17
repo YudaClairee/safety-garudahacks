@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { CSRProgram } from '../../lib/types'
+import { getTaskCategory, taskCategories } from '../../lib/task-categories'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Wallet,
@@ -41,16 +42,6 @@ export const Route = createFileRoute('/dashboard/corporate')({
   },
   component: CorporateDashboard,
 })
-
-const taskCategories = [
-  'Membersihkan lingkungan',
-  'Membantu tetangga lansia',
-  'Menanam pohon',
-  'Mengelola sampah',
-  'Mengajar anak-anak',
-  'Donasi makanan',
-  'Kegiatan sosial lainnya',
-]
 
 function CorporateDashboard() {
   const { programs, tasks } = Route.useLoaderData()
@@ -103,7 +94,7 @@ function CorporateDashboard() {
   const [budget, setBudget] = useState('')
   const [location, setLocation] = useState('')
   const [rewardPoints, setRewardPoints] = useState('1000')
-  const [focusCategory, setFocusCategory] = useState(taskCategories[0])
+  const [focusCategory, setFocusCategory] = useState(taskCategories[0].value)
   const [errors, setErrors] = useState<{
     companyName?: string
     budget?: string
@@ -485,7 +476,7 @@ function CorporateDashboard() {
                           {task.photo_url ? (
                             <button
                               onClick={() => setPreviewTask(task)}
-                              className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200 cursor-zoom-in hover:opacity-80 transition-opacity"
+                              className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200 cursor-zoom-in hover:opacity-80 transition-opacity"
                               title="Klik untuk memperbesar bukti foto"
                             >
                               <img
@@ -495,7 +486,7 @@ function CorporateDashboard() {
                               />
                             </button>
                           ) : (
-                            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
                               <Target className="h-5 w-5 text-slate-400" />
                             </div>
                           )}
@@ -504,7 +495,7 @@ function CorporateDashboard() {
                               {task.users?.email || 'Relawan Anonim'}
                             </span>
                             <span className="text-sm text-slate-550 font-medium">
-                              {task.type}
+                              {getTaskCategory(task.type)?.label ?? task.type}
                             </span>
                             {task.location && (
                               <span className="text-xs text-slate-500 font-medium">
@@ -703,8 +694,8 @@ function CorporateDashboard() {
                     className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                   >
                     {taskCategories.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
+                      <option key={item.value} value={item.value}>
+                        {item.label}
                       </option>
                     ))}
                   </select>
@@ -774,7 +765,7 @@ function CorporateDashboard() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 transition-opacity cursor-pointer mt-2"
+                  className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-50 transition-opacity cursor-pointer mt-2"
                 >
                   {isSubmitting ? 'Menyimpan...' : 'Daftarkan Program'}
                 </button>
@@ -796,7 +787,7 @@ function CorporateDashboard() {
             </button>
 
             <h3 className="text-lg font-bold text-slate-955 pr-8 truncate">
-              Bukti Aksi: {previewTask.type}
+              Bukti Aksi: {getTaskCategory(previewTask.type)?.label ?? previewTask.type}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
               Oleh: {previewTask.users?.email || 'Relawan Anonim'}
