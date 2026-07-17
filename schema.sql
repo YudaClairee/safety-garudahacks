@@ -63,6 +63,23 @@ CREATE TABLE public.csr_programs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 3b. Riwayat Penukaran Reward Internal (Hackathon MVP)
+CREATE TABLE public.reward_redemptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) NOT NULL,
+  reward_name TEXT NOT NULL,
+  reward_type TEXT NOT NULL,
+  reward_value NUMERIC NOT NULL,
+  points_cost INTEGER NOT NULL,
+  voucher_code TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'issued',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.reward_redemptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Redemptions are viewable by everyone." ON public.reward_redemptions FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own redemptions." ON public.reward_redemptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+
 -- Mengaktifkan RLS untuk CSR Programs
 ALTER TABLE public.csr_programs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "CSR Programs are viewable by everyone." ON public.csr_programs FOR SELECT USING (true);

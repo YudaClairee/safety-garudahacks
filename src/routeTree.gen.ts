@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardWargaRouteImport } from './routes/dashboard/warga'
 import { Route as DashboardCorporateRouteImport } from './routes/dashboard/corporate'
 import { Route as ApiTriggerAutomationRouteImport } from './routes/api/trigger-automation'
+import { Route as ApiRedeemRewardRouteImport } from './routes/api/redeem-reward'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -46,11 +47,17 @@ const ApiTriggerAutomationRoute = ApiTriggerAutomationRouteImport.update({
   path: '/api/trigger-automation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRedeemRewardRoute = ApiRedeemRewardRouteImport.update({
+  id: '/api/redeem-reward',
+  path: '/api/redeem-reward',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/api/redeem-reward': typeof ApiRedeemRewardRoute
   '/api/trigger-automation': typeof ApiTriggerAutomationRoute
   '/dashboard/corporate': typeof DashboardCorporateRoute
   '/dashboard/warga': typeof DashboardWargaRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/api/redeem-reward': typeof ApiRedeemRewardRoute
   '/api/trigger-automation': typeof ApiTriggerAutomationRoute
   '/dashboard/corporate': typeof DashboardCorporateRoute
   '/dashboard/warga': typeof DashboardWargaRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/api/redeem-reward': typeof ApiRedeemRewardRoute
   '/api/trigger-automation': typeof ApiTriggerAutomationRoute
   '/dashboard/corporate': typeof DashboardCorporateRoute
   '/dashboard/warga': typeof DashboardWargaRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/api/redeem-reward'
     | '/api/trigger-automation'
     | '/dashboard/corporate'
     | '/dashboard/warga'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/api/redeem-reward'
     | '/api/trigger-automation'
     | '/dashboard/corporate'
     | '/dashboard/warga'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/api/redeem-reward'
     | '/api/trigger-automation'
     | '/dashboard/corporate'
     | '/dashboard/warga'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiRedeemRewardRoute: typeof ApiRedeemRewardRoute
   ApiTriggerAutomationRoute: typeof ApiTriggerAutomationRoute
 }
 
@@ -150,6 +163,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTriggerAutomationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/redeem-reward': {
+      id: '/api/redeem-reward'
+      path: '/api/redeem-reward'
+      fullPath: '/api/redeem-reward'
+      preLoaderRoute: typeof ApiRedeemRewardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -171,6 +191,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiRedeemRewardRoute: ApiRedeemRewardRoute,
   ApiTriggerAutomationRoute: ApiTriggerAutomationRoute,
 }
 export const routeTree = rootRouteImport

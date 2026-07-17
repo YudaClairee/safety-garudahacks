@@ -89,6 +89,7 @@ const rewards = [
   {
     id: '1',
     name: 'Voucher Paket Sembako',
+    rewardType: 'Voucher Paket Sembako',
     cost: 12000,
     provider: 'Kebutuhan Pangan',
     description: 'Dukungan kebutuhan pangan pokok untuk rumah tangga yang membutuhkan.',
@@ -96,6 +97,7 @@ const rewards = [
   {
     id: '2',
     name: 'Token Listrik & BPJS Kesehatan',
+    rewardType: 'Token Listrik PLN',
     cost: 18000,
     provider: 'Utilitas & Proteksi Dasar',
     description: 'Bantuan tagihan dasar dan perlindungan kesehatan agar beban darurat lebih ringan.',
@@ -103,6 +105,7 @@ const rewards = [
   {
     id: '3',
     name: 'Cash Out E-Wallet (DANA / OVO / GoPay)',
+    rewardType: 'Transfer E-Wallet Darurat',
     cost: 25000,
     provider: 'Dompet Digital',
     description: 'Pencairan fleksibel untuk kebutuhan mendesak via dompet digital pilihan Anda.',
@@ -126,6 +129,7 @@ function WargaRoute() {
   // Reward Store states
   const [isRewardOpen, setIsRewardOpen] = useState(false)
   const [successClaim, setSuccessClaim] = useState<string | null>(null)
+  const [voucherCode, setVoucherCode] = useState<string | null>(null)
 
   function handleProgramChange(id: string) {
     setSelectedProgramId(id)
@@ -244,12 +248,37 @@ function WargaRoute() {
     }
   }
 
-  function handleClaimReward(rewardName: string, cost: number) {
+  async function handleClaimReward(rewardName: string, cost: number, rewardType: string) {
     if (points < cost) {
       alert('Saldo Safety Net Anda tidak cukup untuk menukarkan opsi ini.')
       return
     }
-    setSuccessClaim(`Selamat! Anda telah sukses menukarkan ${cost.toLocaleString('id-ID')} poin Safety Net untuk "${rewardName}". Kode e-voucher akan dikirim ke email Anda.`)
+
+    try {
+      const res = await fetch('/api/redeem-reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rewardName,
+          rewardType,
+          rewardValue: cost,
+          pointsCost: cost,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Redeem gagal diproses')
+      }
+
+      setVoucherCode(data.voucherCode)
+      setSuccessClaim(
+        `Selamat! Anda telah sukses menukarkan ${cost.toLocaleString('id-ID')} poin Safety Net untuk "${rewardName}".`,
+      )
+      router.invalidate()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Redeem gagal diproses')
+    }
   }
 
   return (
@@ -304,6 +333,7 @@ function WargaRoute() {
                 <button 
                   onClick={() => {
                     setSuccessClaim(null)
+                    setVoucherCode(null)
                     setIsRewardOpen(true)
                   }}
                   className="mt-4 flex w-full justify-center items-center gap-2 bg-white/20 hover:bg-white/30 text-xs font-semibold py-2 px-3 rounded-xl transition cursor-pointer"
@@ -633,6 +663,11 @@ function WargaRoute() {
                 <CheckCircle2 className="h-10 w-10 text-emerald-600" />
                 <p className="font-semibold text-base">Penukaran Berhasil!</p>
                 <p className="text-xs leading-relaxed">{successClaim}</p>
+                {voucherCode && (
+                  <div className="rounded-xl bg-white/80 px-4 py-3 text-left text-xs font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200">
+                    Kode Voucher: <span className="font-bold tracking-wider">{voucherCode}</span>
+                  </div>
+                )}
                 <button
                   onClick={() => setSuccessClaim(null)}
                   className="mt-2 text-xs font-semibold px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition cursor-pointer"
@@ -655,7 +690,7 @@ function WargaRoute() {
                     <div className="flex items-center gap-4 justify-between sm:justify-end">
                       <span className="text-sm font-semibold text-primary">{reward.cost.toLocaleString('id-ID')} Safety Net</span>
                       <button
-                        onClick={() => handleClaimReward(reward.name, reward.cost)}
+                        onClick={() => handleClaimReward(reward.name, reward.cost, reward.rewardType)}
                         disabled={points < reward.cost}
                         className={`text-xs font-semibold py-2 px-4 rounded-xl transition cursor-pointer ${
                           points >= reward.cost
