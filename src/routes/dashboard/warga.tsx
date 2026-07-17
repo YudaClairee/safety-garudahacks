@@ -203,8 +203,17 @@ function WargaRoute() {
   const isGeneral = selectedProgramId === 'general'
   const isRegisteredForSelected = isGeneral ? true : registrations.includes(selectedProgramId)
   const selectedProgramHasStarted = isGeneral ? true : (selectedProgram?.start_date ? new Date() >= new Date(selectedProgram.start_date) : true)
-  const selectedProgramHasEnded = isGeneral ? false : (selectedProgram?.end_date ? new Date() > new Date(selectedProgram.end_date) : false)
-  const isFormBlocked = !isGeneral && (!isRegisteredForSelected || !selectedProgramHasStarted || selectedProgramHasEnded)
+  const selectedProgramHasEnded = isGeneral ? false : (selectedProgram?.end_date ? (() => {
+    const d = new Date(selectedProgram.end_date)
+    d.setHours(23, 59, 59, 999)
+    return new Date() > d
+  })() : false)
+  
+  // Platform Fee quota calculation
+  const selectedProgramCost = selectedProgram ? Math.round(Number(selectedProgram.reward_value || 0) * 1.12) : 0
+  const selectedProgramHasQuota = isGeneral ? true : (selectedProgram ? Number(selectedProgram.budget_rupiah) >= selectedProgramCost : false)
+  
+  const isFormBlocked = !isGeneral && (!isRegisteredForSelected || !selectedProgramHasStarted || selectedProgramHasEnded || !selectedProgramHasQuota)
 
   function handleProgramChange(id: string) {
     setSelectedProgramId(id)
@@ -244,9 +253,19 @@ function WargaRoute() {
           return
         }
 
-        const isAfter = prog.end_date ? new Date() > new Date(prog.end_date) : false
+        const isAfter = prog.end_date ? (() => {
+          const d = new Date(prog.end_date)
+          d.setHours(23, 59, 59, 999)
+          return new Date() > d
+        })() : false
         if (isAfter) {
           setError('Periode program CSR ini sudah berakhir.')
+          return
+        }
+
+        const cost = Math.round(Number(prog.reward_value || 0) * 1.12)
+        if (Number(prog.budget_rupiah) < cost) {
+          setError('Kuota pendanaan program CSR ini sudah habis.')
           return
         }
       }
@@ -525,11 +544,15 @@ function WargaRoute() {
                   className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="general">Cocokkan Otomatis (Pooled Funding)</option>
-                  {activePrograms.map((prog) => (
-                    <option key={prog.id} value={prog.id}>
-                      {prog.company_name} (Fokus: {prog.focus_category} | Lokasi: {prog.location || 'Semua Wilayah'} | +{Number(prog.reward_value || 0).toLocaleString('id-ID')} Poin)
-                    </option>
-                  ))}
+                  {activePrograms.map((prog) => {
+                    const cost = Math.round(Number(prog.reward_value || 0) * 1.12)
+                    const remaining = cost > 0 ? Math.floor(Number(prog.budget_rupiah) / cost) : 0
+                    return (
+                      <option key={prog.id} value={prog.id} disabled={remaining <= 0}>
+                        {prog.company_name} (Fokus: {prog.focus_category} | Lokasi: {prog.location || 'Semua Wilayah'} | +{Number(prog.reward_value || 0).toLocaleString('id-ID')} Poin | Sisa Kuota: {remaining} slot)
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
 
@@ -544,14 +567,18 @@ function WargaRoute() {
                         ? 'Pendaftaran Diperlukan' 
                         : selectedProgramHasEnded 
                           ? 'Program CSR Selesai' 
-                          : 'Aksi Belum Dimulai'}
+                          : !selectedProgramHasQuota 
+                            ? 'Kuota Program Habis' 
+                            : 'Aksi Belum Dimulai'}
                     </h3>
                     <p className="mt-1 text-xs text-slate-500 max-w-sm leading-relaxed">
                       {!isRegisteredForSelected
                         ? `Anda harus mendaftar sebagai relawan untuk program "${selectedProgram?.company_name}" terlebih dahulu sebelum dapat mengirimkan laporan tugas.`
                         : selectedProgramHasEnded
                           ? `Program "${selectedProgram?.company_name}" telah berakhir pada ${new Date(selectedProgram.end_date!).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}.`
-                          : `Program "${selectedProgram?.company_name}" baru akan dimulai pada tanggal ${new Date(selectedProgram.start_date!).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`}
+                          : !selectedProgramHasQuota
+                            ? `Program "${selectedProgram?.company_name}" telah kehabisan kuota pendanaan untuk saat ini.`
+                            : `Program "${selectedProgram?.company_name}" baru akan dimulai pada tanggal ${new Date(selectedProgram.start_date!).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`}
                     </p>
                   </div>
                   
@@ -805,12 +832,21 @@ function WargaRoute() {
                 activePrograms.map((program) => {
                   const isRegistered = registrations.includes(program.id)
                   const startDateObj = program.start_date ? new Date(program.start_date) : null
-                  const endDateObj = program.end_date ? new Date(program.end_date) : null
+                  const endDateObj = program.end_date ? (() => {
+                    const d = new Date(program.end_date)
+                    d.setHours(23, 59, 59, 999)
+                    return d
+                  })() : null
                   const now = new Date()
                   
                   const isBeforeStart = startDateObj ? startDateObj > now : false
                   const isAfterEnd = endDateObj ? now > endDateObj : false
                   const isOngoing = !isBeforeStart && !isAfterEnd
+
+                  const cost = Math.round(Number(program.reward_value || 0) * 1.12)
+                  const remaining = cost > 0 ? Math.floor(Number(program.budget_rupiah) / cost) : 0
+                  const total = remaining + (program.tasks_funded || 0)
+                  const hasQuota = remaining > 0
 
                   const startDateStr = startDateObj ? startDateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) : ''
                   const endDateStr = endDateObj ? endDateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
@@ -821,6 +857,9 @@ function WargaRoute() {
                   if (isAfterEnd) {
                     statusText = 'Selesai'
                     statusStyle = 'text-slate-500 bg-slate-100'
+                  } else if (!hasQuota) {
+                    statusText = 'Kuota Habis'
+                    statusStyle = 'text-red-600 bg-red-50'
                   } else if (isBeforeStart) {
                     statusText = 'Pendaftaran'
                     statusStyle = 'text-blue-600 bg-blue-50'
@@ -851,6 +890,9 @@ function WargaRoute() {
                           <span className="text-[11px] text-amber-600 font-bold inline-flex items-center gap-1 mt-0.5">
                             🎁 +{Number(program.reward_value || 0).toLocaleString('id-ID')} Poin
                           </span>
+                          <span className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                            🎟️ Kuota: {remaining} / {total} slot
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-xs border-t border-slate-100/50 pt-2">
@@ -866,6 +908,10 @@ function WargaRoute() {
                       ) : isAfterEnd ? (
                         <div className="text-center rounded-xl bg-slate-100 text-slate-500 text-[11px] font-semibold py-1.5 mt-1">
                           Periode Program Berakhir
+                        </div>
+                      ) : !hasQuota ? (
+                        <div className="text-center rounded-xl bg-red-50 text-red-700 text-[11px] font-semibold py-1.5 mt-1 border border-red-100">
+                          Kuota Pendanaan Habis
                         </div>
                       ) : (
                         <Button
