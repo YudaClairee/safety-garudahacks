@@ -6,6 +6,7 @@ import { LogOut, Gift, X, Image as ImageIcon, CheckCircle2, Camera, Compass, Map
 import { supabase } from '@/lib/supabase'
 import { getTaskCategory, taskCategories } from '@/lib/task-categories'
 import { Button } from '@/components/ui/button'
+import HeatmapMap from '../../components/HeatmapMap'
 
 type TaskStatus = 'Pending' | 'Approved'
 
@@ -162,6 +163,7 @@ const rewards = [
 function WargaRoute() {
   const { points, history: initialHistory, activePrograms, registrations, redemptions } = Route.useLoaderData()
   const router = useRouter()
+  const gpsTasks = initialHistory.filter((task) => task.latitude != null && task.longitude != null)
   
   const [selectedProgramId, setSelectedProgramId] = useState('general')
   const [category, setCategory] = useState(taskCategories[0].value)
@@ -1052,6 +1054,48 @@ function WargaRoute() {
               )}
             </form>
           </section>
+
+          {gpsTasks.length > 0 && (
+            <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-6 shadow-sm space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary">Jejak Kontribusi</p>
+                <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">Peta Jaring Pengaman Anda</h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Lihat sebaran aksi keselamatan yang telah Anda lakukan di sekitar komunitas.
+                </p>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <HeatmapMap 
+                  mode="markers" 
+                  tasks={gpsTasks.map(t => ({
+                    id: t.id,
+                    latitude: t.latitude!,
+                    longitude: t.longitude!,
+                    type: t.category,
+                    status: t.status === 'Approved' ? 'approved' : 'pending',
+                    location: t.location,
+                    created_at: t.createdAt,
+                    company_name: t.companyName,
+                    description: t.description,
+                    photo_url: t.photoUrl
+                  }))} 
+                  height="300px" 
+                />
+              </div>
+
+              <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 px-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <strong>{gpsTasks.filter(t => t.status === 'Approved').length}</strong> Disetujui
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <strong>{gpsTasks.filter(t => t.status !== 'Approved').length}</strong> Pending
+                </span>
+              </div>
+            </section>
+          )}
 
           <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
             <div className="flex items-center justify-between gap-4">

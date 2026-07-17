@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import type { CSRProgram } from '../../lib/types'
 import { getTaskCategory, taskCategories } from '../../lib/task-categories'
 import { motion, AnimatePresence } from 'framer-motion'
+import HeatmapMap from '../../components/HeatmapMap'
 import {
   Wallet,
   Target,
@@ -62,6 +63,11 @@ function CorporateDashboard() {
   const router = useRouter()
 
   const [isSimulating, setIsSimulating] = useState(false)
+
+  // Map filter states
+  const [mapProgramId, setMapProgramId] = useState('all')
+  const [mapCategory, setMapCategory] = useState('all')
+  const [mapStatus, setMapStatus] = useState('approved')
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -263,6 +269,35 @@ function CorporateDashboard() {
     mitigationCategories.includes(task.type),
   ).length
   const estimatedHouseholdImpact = totalVolunteersHelped * 3.9
+
+  // Filter tasks for Geospatial Map
+  const filteredMapTasks = tasks.filter((task: any) => {
+    // 1. Filter by program
+    if (mapProgramId !== 'all') {
+      const selectedProg = programs.find((p) => p.id === mapProgramId)
+      if (!selectedProg || task.company_name !== selectedProg.company_name) {
+        return false
+      }
+    } else {
+      const myCompanyNames = programs.map((p) => p.company_name)
+      if (task.status === 'approved' && !myCompanyNames.includes(task.company_name)) {
+        return false
+      }
+    }
+
+    // 2. Filter by category
+    if (mapCategory !== 'all' && task.type !== mapCategory) {
+      return false
+    }
+
+    // 3. Filter by status
+    if (mapStatus !== 'all' && task.status !== mapStatus) {
+      return false
+    }
+
+    // Must have latitude and longitude
+    return task.latitude != null && task.longitude != null
+  })
 
   const categoryToWorkArea: Record<string, string> = {
     'Membersihkan lingkungan': 'Lingkungan',
@@ -733,6 +768,95 @@ function CorporateDashboard() {
               </div>
             </div>
           </section>
+
+          {/* Section Peta Dampak Geospasial */}
+          <motion.section 
+            variants={itemVariants} 
+            className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm space-y-6"
+          >
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary">Analisis Dampak Spasial</p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900">Peta & Heatmap Sebaran Safety Nets</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Visualisasikan wilayah kontribusi aksi relawan dan jangkauan jaring pengaman sosial dari dana CSR Anda.
+                </p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Program selector */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Program CSR</label>
+                  <select
+                    value={mapProgramId}
+                    onChange={(e) => setMapProgramId(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-primary focus:bg-white cursor-pointer"
+                  >
+                    <option value="all">Semua Program ({programs.length})</option>
+                    {programs.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.focus_category} ({p.company_name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Category selector */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Kategori Aksi</label>
+                  <select
+                    value={mapCategory}
+                    onChange={(e) => setMapCategory(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-primary focus:bg-white cursor-pointer"
+                  >
+                    <option value="all">Semua Kategori</option>
+                    {taskCategories.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label.split(' (')[0]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status selector */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Status Tugas</label>
+                  <select
+                    value={mapStatus}
+                    onChange={(e) => setMapStatus(e.target.value)}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-primary focus:bg-white cursor-pointer"
+                  >
+                    <option value="approved">Disetujui (Approved)</option>
+                    <option value="pending">Menunggu (Pending)</option>
+                    <option value="all">Semua Status</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Map Element */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
+              <HeatmapMap mode="heatmap" tasks={filteredMapTasks} height="420px" />
+            </div>
+
+            {/* Map Summary Info */}
+            <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <strong>{filteredMapTasks.filter(t => t.status === 'approved').length}</strong> Aksi Disetujui
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <strong>{filteredMapTasks.filter(t => t.status === 'pending').length}</strong> Aksi Pending
+                </span>
+              </div>
+              <div>
+                Menampilkan <strong>{filteredMapTasks.length}</strong> titik koordinat dari program aktif.
+              </div>
+            </div>
+          </motion.section>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             {/* Left/Middle Columns: Activity Log */}
