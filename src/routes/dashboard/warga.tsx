@@ -22,10 +22,21 @@ type TaskReport = {
   rewardValue?: number
 }
 
+type RedemptionRecord = {
+  id: string
+  rewardName: string
+  rewardType: string
+  rewardValue: number
+  pointsCost: number
+  voucherCode: string
+  status: string
+  createdAt: string
+}
+
 export const Route = createFileRoute('/dashboard/warga')({
   loader: async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { points: 0, history: [], activePrograms: [] }
+    if (!session) return { points: 0, history: [], activePrograms: [], redemptions: [] }
 
     const { data: user } = await supabase
       .from('users')
@@ -43,6 +54,12 @@ export const Route = createFileRoute('/dashboard/warga')({
       .from('csr_programs')
       .select('id, company_name, focus_category, budget_rupiah, location, reward_type, reward_value')
       .gt('budget_rupiah', 0)
+      .order('created_at', { ascending: false })
+
+    const { data: redemptionsData } = await supabase
+      .from('reward_redemptions')
+      .select('id, reward_name, reward_type, reward_value, points_cost, voucher_code, status, created_at')
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
 
     const activePrograms = (activeProgramsData || []) as any[]
@@ -80,6 +97,19 @@ export const Route = createFileRoute('/dashboard/warga')({
         }
       }) as TaskReport[],
       activePrograms,
+      redemptions: (redemptionsData || []).map((item) => ({
+        id: item.id,
+        rewardName: item.reward_name,
+        rewardType: item.reward_type,
+        rewardValue: Number(item.reward_value || 0),
+        pointsCost: Number(item.points_cost || 0),
+        voucherCode: item.voucher_code,
+        status: item.status,
+        createdAt: new Date(item.created_at).toLocaleString('id-ID', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        }),
+      })) as RedemptionRecord[],
     }
   },
   component: WargaRoute
@@ -113,7 +143,7 @@ const rewards = [
 ]
 
 function WargaRoute() {
-  const { points, history: initialHistory, activePrograms } = Route.useLoaderData()
+  const { points, history: initialHistory, activePrograms, redemptions } = Route.useLoaderData()
   const router = useRouter()
   
   const [selectedProgramId, setSelectedProgramId] = useState('general')
@@ -342,6 +372,57 @@ function WargaRoute() {
                   Tukar Safety Net
                 </button>
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Voucher Saya</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Riwayat voucher internal yang sudah kamu klaim dari Safety Net.
+                </p>
+              </div>
+              <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {redemptions.length} Klaim
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {redemptions.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-200 px-6 py-10 text-center">
+                  <p className="text-sm font-medium text-slate-600">Belum ada voucher yang diklaim.</p>
+                  <p className="mt-1 text-xs text-slate-400">Klaim benefit pertamamu dari modal Tukar Safety Net.</p>
+                </div>
+              ) : (
+                redemptions.map((redeem) => (
+                  <article
+                    key={redeem.id}
+                    className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 shadow-sm"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-semibold text-slate-900">{redeem.rewardName}</h3>
+                        <p className="text-xs text-slate-500">
+                          {redeem.rewardType} · Rp {redeem.rewardValue.toLocaleString('id-ID')}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Kode Voucher: <span className="font-semibold tracking-wider text-slate-700">{redeem.voucherCode}</span>
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                          {redeem.status.toUpperCase()}
+                        </span>
+                        <span className="text-xs font-medium text-primary">
+                          {redeem.pointsCost.toLocaleString('id-ID')} Safety Net
+                        </span>
+                        <span className="text-[11px] text-slate-400">{redeem.createdAt}</span>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
           </section>
 
