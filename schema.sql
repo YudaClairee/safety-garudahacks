@@ -33,6 +33,11 @@ CREATE TABLE public.tasks (
   type TEXT NOT NULL, -- e.g., 'Pelatihan', 'Konstruksi', 'Mengajar', dll.
   status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
   photo_url TEXT NOT NULL,
+  company_name TEXT DEFAULT '',
+  location TEXT,
+  description TEXT,
+  reward_type TEXT,
+  reward_value NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -46,9 +51,15 @@ CREATE POLICY "Tasks can be updated by anyone (Hackathon MVP)" ON public.tasks F
 -- 3. Buat Tabel Program CSR Corporate
 CREATE TABLE public.csr_programs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id),
   company_name TEXT NOT NULL,
   budget_rupiah NUMERIC NOT NULL DEFAULT 0,
   tasks_funded INTEGER NOT NULL DEFAULT 0,
+  focus_category TEXT,
+  location TEXT,
+  reward_type TEXT NOT NULL DEFAULT 'Voucher Sembako',
+  reward_value NUMERIC NOT NULL DEFAULT 50000,
+  reward_points INTEGER NOT NULL DEFAULT 1000,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

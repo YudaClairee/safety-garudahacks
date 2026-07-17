@@ -18,6 +18,8 @@ type TaskReport = {
   companyName: string
   location?: string
   description?: string
+  rewardType?: string
+  rewardValue?: number
 }
 
 export const Route = createFileRoute('/dashboard/warga')({
@@ -33,32 +35,51 @@ export const Route = createFileRoute('/dashboard/warga')({
     
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, type, status, created_at, photo_url, company_name, location, description')
+      .select('id, type, status, created_at, photo_url, company_name, location, description, reward_type, reward_value')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
 
     const { data: activeProgramsData } = await supabase
       .from('csr_programs')
-      .select('id, company_name, focus_category, budget_rupiah, location')
+      .select('id, company_name, focus_category, budget_rupiah, location, reward_type, reward_value')
       .gt('budget_rupiah', 0)
       .order('created_at', { ascending: false })
 
+    const activePrograms = (activeProgramsData || []) as any[]
+
+    function findProgramForTask(task: any) {
+      if (task.company_name) {
+        const byCompany = activePrograms.find((program) => program.company_name === task.company_name)
+        if (byCompany) return byCompany
+      }
+
+      return activePrograms.find((program) => program.focus_category === task.type)
+    }
+
     return {
       points: user?.points || 0,
-      history: (tasks || []).map(t => ({
+      history: (tasks || []).map(t => {
+        const matchedProgram = findProgramForTask(t)
+        const rewardType = t.reward_type || matchedProgram?.reward_type || 'Menunggu program CSR'
+        const rewardValue = Number(t.reward_value ?? matchedProgram?.reward_value ?? 0)
+
+        return {
         id: t.id,
         category: t.type,
         status: t.status === 'approved' ? 'Approved' : 'Pending',
         photoUrl: t.photo_url || '',
-        companyName: t.company_name || '',
+        companyName: t.company_name || matchedProgram?.company_name || '',
         location: t.location || '',
         description: t.description || '',
+        rewardType,
+        rewardValue,
         createdAt: new Date(t.created_at).toLocaleString('id-ID', {
           day: '2-digit', month: 'short', year: 'numeric',
           hour: '2-digit', minute: '2-digit'
         }),
-      })) as TaskReport[],
-      activePrograms: (activeProgramsData || []) as any[]
+        }
+      }) as TaskReport[],
+      activePrograms,
     }
   },
   component: WargaRoute
@@ -93,7 +114,7 @@ function WargaRoute() {
   const router = useRouter()
   
   const [selectedProgramId, setSelectedProgramId] = useState('general')
-  const [category, setCategory] = useState(taskCategories[0])
+  const [category, setCategory] = useState(taskCategories[0].value)
   const [location, setLocation] = useState('')
   const [description, setDescription] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
@@ -162,9 +183,15 @@ function WargaRoute() {
         .getPublicUrl(data.path)
 
       let finalCompanyName = ''
+      let finalRewardType = ''
+      let finalRewardValue: number | null = null
       if (selectedProgramId !== 'general') {
         const prog = activePrograms.find(p => p.id === selectedProgramId)
-        if (prog) finalCompanyName = prog.company_name
+        if (prog) {
+          finalCompanyName = prog.company_name
+          finalRewardType = prog.reward_type || ''
+          finalRewardValue = Number(prog.reward_value) || null
+        }
       }
 
       const { error: insertError } = await supabase
@@ -177,6 +204,8 @@ function WargaRoute() {
           company_name: finalCompanyName,
           location: location.trim(),
           description: description.trim(),
+          reward_type: finalRewardType || null,
+          reward_value: finalRewardValue,
         })
       
       if (insertError) throw insertError
@@ -487,11 +516,12 @@ function WargaRoute() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-900 truncate">{task.category}</p>
-                        {task.companyName && (
-                          <p className="text-xs text-primary font-semibold mt-0.5">
-                            Didanai: {task.companyName}
-                          </p>
-                        )}
+                        <div className="mt-1 inline-flex max-w-full items-center rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+                          🎁 Benefit: {task.rewardType || 'Menunggu program CSR'}{task.rewardValue ? ` (Rp ${task.rewardValue.toLocaleString('id-ID')})` : ''}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Didanai langsung oleh {task.companyName || 'program CSR'} via Program CSR
+                        </p>
                         {task.location && (
                           <p className="text-xs text-slate-600 font-medium mt-0.5">
                             Lokasi: {task.location}

@@ -1,11 +1,14 @@
 export interface CSRProgram {
   id: string
+  user_id: string
   company_name: string
   budget_rupiah: number
   tasks_funded: number
   created_at: string
   focus_category?: string
   location?: string
+  reward_type: string
+  reward_value: number
   reward_points?: number
 }
 
@@ -24,5 +27,10 @@ export interface Task {
   status: string
   photo_url: string
   created_at: string
+  company_name?: string
+  location?: string
+  description?: string
+  reward_type?: string
+  reward_value?: number
   users?: { email: string }
 }

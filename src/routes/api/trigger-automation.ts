@@ -97,7 +97,9 @@ async function handleAutomation() {
           .from('tasks')
           .update({ 
             status: 'approved',
-            company_name: targetProgram.company_name
+            company_name: targetProgram.company_name,
+            reward_type: targetProgram.reward_type,
+            reward_value: targetProgram.reward_value,
           })
           .eq('id', task.id);
 

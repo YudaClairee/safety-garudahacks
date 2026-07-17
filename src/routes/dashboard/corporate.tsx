@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { CSRProgram } from '../../lib/types'
+import { csrRewardOptions } from '../../lib/csr-reward-options'
 import { getTaskCategory, taskCategories } from '../../lib/task-categories'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -93,13 +94,14 @@ function CorporateDashboard() {
   const [companyName, setCompanyName] = useState('')
   const [budget, setBudget] = useState('')
   const [location, setLocation] = useState('')
-  const [rewardPoints, setRewardPoints] = useState('1000')
+  const [rewardType, setRewardType] = useState(csrRewardOptions[0].value)
+  const [rewardValue, setRewardValue] = useState('50000')
   const [focusCategory, setFocusCategory] = useState(taskCategories[0].value)
   const [errors, setErrors] = useState<{
     companyName?: string
     budget?: string
     location?: string
-    rewardPoints?: string
+    rewardValue?: string
   }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -165,7 +167,11 @@ function CorporateDashboard() {
 
       const newBudget = Number(targetProgram.budget_rupiah) - 250000
       const newTasksFunded = (targetProgram.tasks_funded || 0) + 1
-      const newPoints = (userData?.points || 0) + (Number(targetProgram.reward_points) || 1000)
+      const rewardPointsAwarded =
+        targetProgram.reward_type === 'Safety Credits/Poin'
+          ? Number(targetProgram.reward_value) || Number(targetProgram.reward_points) || 1000
+          : Number(targetProgram.reward_points) || 1000
+      const newPoints = (userData?.points || 0) + rewardPointsAwarded
 
       // 3. Update Database (User Points, CSR Program, and Task Status)
       const { error: userUpdateError } = await supabase
@@ -187,12 +193,14 @@ function CorporateDashboard() {
         .from('tasks')
         .update({ 
           status: 'approved',
-          company_name: targetProgram.company_name
+          company_name: targetProgram.company_name,
+          reward_type: targetProgram.reward_type,
+          reward_value: targetProgram.reward_value,
         })
         .eq('id', task.id)
       if (taskUpdateError) throw new Error(`Gagal memperbarui status tugas: ${taskUpdateError.message}`)
 
-      alert(`Tugas sukses disetujui! Didanai oleh "${targetProgram.company_name}". Relawan mendapat 1.000 poin.`)
+      alert(`Tugas sukses disetujui! Didanai oleh "${targetProgram.company_name}". Relawan mendapat ${rewardPointsAwarded.toLocaleString('id-ID')} poin.`)
       router.invalidate()
     } catch (err: any) {
       alert(`Gagal memproses verifikasi: ${err.message || String(err)}`)
@@ -240,9 +248,9 @@ function CorporateDashboard() {
       newErrors.budget = 'Minimal anggaran adalah Rp 1.000.000'
     }
 
-    const rewardPointsNum = Number(rewardPoints)
-    if (!rewardPoints || isNaN(rewardPointsNum) || rewardPointsNum <= 0) {
-      newErrors.rewardPoints = 'Poin hadiah harus berupa angka lebih besar dari 0'
+    const rewardValueNum = Number(rewardValue)
+    if (!rewardValue || isNaN(rewardValueNum) || rewardValueNum <= 0) {
+      newErrors.rewardValue = 'Reward value harus berupa angka lebih besar dari 0'
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -264,7 +272,9 @@ function CorporateDashboard() {
         tasks_funded: 0,
         focus_category: focusCategory,
         location: location.trim(),
-        reward_points: rewardPointsNum,
+        reward_type: rewardType,
+        reward_value: rewardValueNum,
+        reward_points: rewardType === 'Safety Credits/Poin' ? rewardValueNum : 1000,
         user_id: session.user.id,
       })
 
@@ -274,7 +284,8 @@ function CorporateDashboard() {
       setCompanyName('')
       setBudget('')
       setLocation('')
-      setRewardPoints('1000')
+      setRewardType(csrRewardOptions[0].value)
+      setRewardValue('50000')
       setIsFormOpen(false)
 
       // Invalidate routing query to trigger reload
@@ -600,6 +611,9 @@ function CorporateDashboard() {
                                   Lokasi Target: {program.location}
                                 </span>
                               )}
+                              <span className="text-[10px] text-slate-500 font-medium">
+                                Benefit: {program.reward_type || 'Voucher Paket Sembako'} (Rp {Number(program.reward_value || 0).toLocaleString('id-ID')})
+                              </span>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -616,7 +630,7 @@ function CorporateDashboard() {
                           </div>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
-                          <span>{program.tasks_funded} Tugas didanai ({program.reward_points || 1000} Poin/Aksi)</span>
+                          <span>{program.tasks_funded} Tugas didanai ({program.reward_points || 1000} Safety Credits)</span>
                           <span>
                             {new Date(program.created_at).toLocaleDateString(
                               'id-ID',
@@ -742,17 +756,34 @@ function CorporateDashboard() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
-                    Poin Hadiah per Aksi Relawan
+                    Tipe Reward
+                  </label>
+                  <select
+                    value={rewardType}
+                    onChange={(e) => setRewardType(e.target.value)}
+                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                  >
+                    {csrRewardOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Reward Value (Nominal)
                   </label>
                   <input
                     type="number"
-                    value={rewardPoints}
-                    onChange={(e) => setRewardPoints(e.target.value)}
-                    placeholder="e.g. 1000"
+                    value={rewardValue}
+                    onChange={(e) => setRewardValue(e.target.value)}
+                    placeholder="e.g. 50000"
                     className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                   />
-                  {errors.rewardPoints && (
-                    <p className="mt-1 text-xs text-red-600">{errors.rewardPoints}</p>
+                  {errors.rewardValue && (
+                    <p className="mt-1 text-xs text-red-600">{errors.rewardValue}</p>
                   )}
                 </div>
 
