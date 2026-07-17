@@ -14,12 +14,15 @@ type TaskReport = {
   status: TaskStatus
   createdAt: string
   photoUrl: string
+  companyName: string
+  location?: string
+  description?: string
 }
 
 export const Route = createFileRoute('/dashboard/warga')({
   loader: async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return { points: 0, history: [] }
+    if (!session) return { points: 0, history: [], activePrograms: [] }
 
     const { data: user } = await supabase
       .from('users')
@@ -29,8 +32,14 @@ export const Route = createFileRoute('/dashboard/warga')({
     
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, type, status, created_at, photo_url')
+      .select('id, type, status, created_at, photo_url, company_name, location, description')
       .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false })
+
+    const { data: activeProgramsData } = await supabase
+      .from('csr_programs')
+      .select('id, company_name, focus_category, budget_rupiah, location')
+      .gt('budget_rupiah', 0)
       .order('created_at', { ascending: false })
 
     return {
@@ -40,11 +49,15 @@ export const Route = createFileRoute('/dashboard/warga')({
         category: t.type,
         status: t.status === 'approved' ? 'Approved' : 'Pending',
         photoUrl: t.photo_url || '',
+        companyName: t.company_name || '',
+        location: t.location || '',
+        description: t.description || '',
         createdAt: new Date(t.created_at).toLocaleString('id-ID', {
           day: '2-digit', month: 'short', year: 'numeric',
           hour: '2-digit', minute: '2-digit'
         }),
-      })) as TaskReport[]
+      })) as TaskReport[],
+      activePrograms: (activeProgramsData || []) as any[]
     }
   },
   component: WargaRoute
@@ -69,10 +82,13 @@ const rewards = [
 ]
 
 function WargaRoute() {
-  const { points, history: initialHistory } = Route.useLoaderData()
+  const { points, history: initialHistory, activePrograms } = Route.useLoaderData()
   const router = useRouter()
   
+  const [selectedProgramId, setSelectedProgramId] = useState('general')
   const [category, setCategory] = useState(taskCategories[0])
+  const [location, setLocation] = useState('')
+  const [description, setDescription] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -82,6 +98,19 @@ function WargaRoute() {
   // Reward Store states
   const [isRewardOpen, setIsRewardOpen] = useState(false)
   const [successClaim, setSuccessClaim] = useState<string | null>(null)
+
+  function handleProgramChange(id: string) {
+    setSelectedProgramId(id)
+    if (id !== 'general') {
+      const prog = activePrograms.find(p => p.id === id)
+      if (prog) {
+        if (prog.focus_category) setCategory(prog.focus_category)
+        if (prog.location) setLocation(prog.location)
+      }
+    } else {
+      setLocation('')
+    }
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -95,6 +124,11 @@ function WargaRoute() {
 
     if (!photo) {
       setError('Silakan pilih foto tugas sebelum mengirim laporan.')
+      return
+    }
+
+    if (!location.trim()) {
+      setError('Silakan isi lokasi spesifik aksi sosial.')
       return
     }
 
@@ -120,13 +154,22 @@ function WargaRoute() {
         .from('task_photos')
         .getPublicUrl(data.path)
 
+      let finalCompanyName = ''
+      if (selectedProgramId !== 'general') {
+        const prog = activePrograms.find(p => p.id === selectedProgramId)
+        if (prog) finalCompanyName = prog.company_name
+      }
+
       const { error: insertError } = await supabase
         .from('tasks')
         .insert({
           user_id: session.user.id,
           type: category,
           status: 'pending',
-          photo_url: publicUrlData.publicUrl
+          photo_url: publicUrlData.publicUrl,
+          company_name: finalCompanyName,
+          location: location.trim(),
+          description: description.trim(),
         })
       
       if (insertError) throw insertError
@@ -134,6 +177,9 @@ function WargaRoute() {
       setMessage(`Laporan untuk kategori "${category}" telah berhasil dikirim.`)
       setPhoto(null)
       setPhotoPreview(null)
+      setLocation('')
+      setDescription('')
+      setSelectedProgramId('general')
       setCategory(taskCategories[0])
       
       // Invalidate to refresh loader data
@@ -193,8 +239,10 @@ function WargaRoute() {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        <div className="space-y-6">
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* Main Column */}
+          <div className="lg:col-span-2 space-y-6">
           <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -228,15 +276,31 @@ function WargaRoute() {
               <div>
                 <h2 className="text-xl font-semibold">Form Lapor Tugas</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Pilih satu dari kategori tugas berikut dan unggah bukti foto tugas yang Anda lakukan.
+                  Pilih sponsor CSR program atau kirimkan laporan umum untuk dicocokkan otomatis.
                 </p>
               </div>
-              <span className="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary w-fit">
-                {taskCategories.length} kategori aktif
-              </span>
             </div>
 
             <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label htmlFor="program" className="block text-sm font-medium text-slate-700">
+                  Pilih Sponsor Program CSR
+                </label>
+                <select
+                  id="program"
+                  value={selectedProgramId}
+                  onChange={(event) => handleProgramChange(event.target.value)}
+                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="general">Cocokkan Otomatis (Pooled Funding)</option>
+                  {activePrograms.map((prog) => (
+                    <option key={prog.id} value={prog.id}>
+                      {prog.company_name} (Fokus: {prog.focus_category} | Lokasi: {prog.location || 'Semua Wilayah'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-2">
                 <label htmlFor="category" className="block text-sm font-medium text-foreground">
                   Kategori Tugas
@@ -244,8 +308,9 @@ function WargaRoute() {
                 <select
                   id="category"
                   value={category}
+                  disabled={selectedProgramId !== 'general'}
                   onChange={(event) => setCategory(event.target.value)}
-                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="w-full rounded-2xl border border-border bg-background disabled:bg-slate-100 disabled:text-slate-550 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   {taskCategories.map((item) => (
                     <option key={item} value={item}>
@@ -253,6 +318,47 @@ function WargaRoute() {
                     </option>
                   ))}
                 </select>
+                {selectedProgramId !== 'general' && (
+                  <p className="text-[11px] text-slate-500 italic mt-1">
+                    *Kategori dikunci secara otomatis sesuai fokus CSR sponsor yang Anda pilih.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="location" className="block text-sm font-medium text-slate-700">
+                    Lokasi Spesifik Aksi
+                  </label>
+                  <input
+                    id="location"
+                    type="text"
+                    required
+                    disabled={selectedProgramId !== 'general'}
+                    placeholder="e.g. Jalan Dago RT 03 / Taman Hutan Kota"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-background disabled:bg-slate-100 disabled:text-slate-550 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                  {selectedProgramId !== 'general' && (
+                    <p className="text-[10px] text-slate-500 italic mt-1">
+                      *Lokasi dikunci secara otomatis sesuai target wilayah sponsor.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="description" className="block text-sm font-medium text-slate-700">
+                    Deskripsi Singkat Kegiatan
+                  </label>
+                  <input
+                    id="description"
+                    type="text"
+                    placeholder="e.g. Menyapu tumpukan sampah plastik yang menyumbat air"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -336,6 +442,21 @@ function WargaRoute() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-900 truncate">{task.category}</p>
+                        {task.companyName && (
+                          <p className="text-xs text-primary font-semibold mt-0.5">
+                            Didanai: {task.companyName}
+                          </p>
+                        )}
+                        {task.location && (
+                          <p className="text-xs text-slate-600 font-medium mt-0.5">
+                            Lokasi: {task.location}
+                          </p>
+                        )}
+                        {task.description && (
+                          <p className="text-xs text-slate-500 mt-0.5 italic">
+                            "{task.description}"
+                          </p>
+                        )}
                         <p className="text-xs text-slate-400 mt-1">{task.createdAt}</p>
                       </div>
                       <div className="flex-shrink-0">
@@ -356,7 +477,59 @@ function WargaRoute() {
             </div>
           </section>
         </div>
-      </main>
+
+        {/* Sidebar: Active CSR Sponsors */}
+        <div className="space-y-6">
+          <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Gift className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                  Sponsor CSR Aktif
+                </h2>
+                <p className="text-[11px] text-slate-400 mt-0.5">Pendanaan aksi warga terbuka</p>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-slate-500 leading-relaxed">
+              Perusahaan-perusahaan berikut sedang mendanai aksi sosial warga. Pastikan aksimu sesuai dengan kategori fokus mereka!
+            </p>
+
+            <div className="mt-6 space-y-4">
+              {activePrograms.length === 0 ? (
+                <div className="text-center py-8 border border-dashed border-slate-200 rounded-2xl">
+                  <p className="text-xs text-slate-400 font-medium">Belum ada sponsor CSR aktif.</p>
+                </div>
+              ) : (
+                activePrograms.map((program) => (
+                  <div 
+                    key={program.id}
+                    className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 hover:bg-slate-50 transition-colors flex flex-col gap-2.5"
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-slate-900">
+                        {program.company_name}
+                      </span>
+                      {program.focus_category && (
+                        <span className="text-[10px] text-primary font-bold mt-1 inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          Fokus: {program.focus_category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-xs border-t border-slate-100/50 pt-2">
+                      <span className="text-slate-400">Status Pendanaan:</span>
+                      <span className="font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Aktif</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
 
       {/* Rewards Store Modal */}
       {isRewardOpen && (

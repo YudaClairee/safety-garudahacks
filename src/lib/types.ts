@@ -4,6 +4,9 @@ export interface CSRProgram {
   budget_rupiah: number
   tasks_funded: number
   created_at: string
+  focus_category?: string
+  location?: string
+  reward_points?: number
 }
 
 export interface User {

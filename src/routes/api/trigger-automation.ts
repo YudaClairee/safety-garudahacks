@@ -54,15 +54,17 @@ async function handleAutomation() {
         const currentPoints = userData?.points || 0;
         const newPoints = currentPoints + 1000; // 1,000 Poin Kebaikan flat reward
 
-        // B. Fetch first active program
+        // B. Fetch first active program matching the task type and having sufficient budget
         const { data: programsData, error: programFetchError } = await supabase
           .from('csr_programs')
           .select('*')
+          .eq('focus_category', task.type)
+          .gte('budget_rupiah', 250000)
           .order('created_at', { ascending: true })
           .limit(1);
 
         if (programFetchError || !programsData || programsData.length === 0) {
-          throw new Error('No CSR program available to fund this task.');
+          throw new Error(`No active CSR program available to fund "${task.type}" (Needs min Rp 250.000).`);
         }
 
         const targetProgram = programsData[0];
@@ -93,7 +95,10 @@ async function handleAutomation() {
 
         const { error: taskUpdateError } = await supabase
           .from('tasks')
-          .update({ status: 'approved' })
+          .update({ 
+            status: 'approved',
+            company_name: targetProgram.company_name
+          })
           .eq('id', task.id);
 
         if (taskUpdateError) throw new Error(`Task status update failed: ${taskUpdateError.message}`);

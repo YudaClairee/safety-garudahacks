@@ -11,18 +11,23 @@ import {
   LogOut,
   X,
   Sparkles,
+  Trash2,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/dashboard/corporate')({
   loader: async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return { programs: [], tasks: [] }
+
     const { data: programsData, error: programsError } = await supabase
       .from('csr_programs')
       .select('*')
+      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
 
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
-      .select('id, type, status, photo_url, created_at, users(email)')
+      .select('id, type, status, photo_url, created_at, location, description, user_id, users(email)')
       .order('created_at', { ascending: false })
 
     if (programsError)
@@ -37,6 +42,16 @@ export const Route = createFileRoute('/dashboard/corporate')({
   component: CorporateDashboard,
 })
 
+const taskCategories = [
+  'Membersihkan lingkungan',
+  'Membantu tetangga lansia',
+  'Menanam pohon',
+  'Mengelola sampah',
+  'Mengajar anak-anak',
+  'Donasi makanan',
+  'Kegiatan sosial lainnya',
+]
+
 function CorporateDashboard() {
   const { programs, tasks } = Route.useLoaderData()
   const router = useRouter()
@@ -46,6 +61,20 @@ function CorporateDashboard() {
   async function handleLogout() {
     await supabase.auth.signOut()
     router.navigate({ to: '/login' })
+  }
+
+  async function handleDeleteProgram(id: string) {
+    if (!confirm('Apakah Anda yakin ingin menghapus program CSR ini?')) return
+    try {
+      const { error } = await supabase
+        .from('csr_programs')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+      router.invalidate() // Reload data
+    } catch (err) {
+      alert(`Gagal menghapus program: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   async function handleTriggerAutomation() {
@@ -72,12 +101,114 @@ function CorporateDashboard() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [companyName, setCompanyName] = useState('')
   const [budget, setBudget] = useState('')
+  const [location, setLocation] = useState('')
+  const [rewardPoints, setRewardPoints] = useState('1000')
+  const [focusCategory, setFocusCategory] = useState(taskCategories[0])
   const [errors, setErrors] = useState<{
     companyName?: string
     budget?: string
+    location?: string
+    rewardPoints?: string
   }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [isVerifying, setIsVerifying] = useState<string | null>(null)
+  const [previewTask, setPreviewTask] = useState<any | null>(null)
+
+  async function handleVerifyTask(task: any, status: 'approved' | 'rejected') {
+    setIsVerifying(task.id)
+    try {
+      if (status === 'rejected') {
+        const { error } = await supabase
+          .from('tasks')
+          .update({ status: 'rejected' })
+          .eq('id', task.id)
+        if (error) throw error
+        alert('Tugas berhasil ditolak.')
+        router.invalidate()
+        return
+      }
+
+      // If approved:
+      // 1. Fetch user's current points
+      const { data: userData, error: userFetchError } = await supabase
+        .from('users')
+        .select('points')
+        .eq('id', task.user_id)
+        .single()
+      if (userFetchError) throw new Error(`Gagal mengambil data relawan: ${userFetchError.message}`)
+
+      // 2. Fetch the company owner's programs
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Sesi login tidak valid')
+
+      // Find programs that belong to the current company user
+      const { data: programsData, error: programFetchError } = await supabase
+        .from('csr_programs')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('focus_category', task.type)
+        .gte('budget_rupiah', 250000)
+        .order('created_at', { ascending: true })
+        .limit(1)
+
+      let targetProgram: any = null
+
+      if (programFetchError || !programsData || programsData.length === 0) {
+        // Fallback: search for any program of this company with enough budget
+        const { data: fallbackPrograms } = await supabase
+          .from('csr_programs')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .gte('budget_rupiah', 250000)
+          .order('created_at', { ascending: true })
+          .limit(1)
+
+        if (!fallbackPrograms || fallbackPrograms.length === 0) {
+          throw new Error('Anda tidak memiliki program CSR aktif dengan sisa anggaran mencukupi (Min Rp 250.000) untuk mendanai tugas ini.')
+        }
+        targetProgram = fallbackPrograms[0]
+      } else {
+        targetProgram = programsData[0]
+      }
+
+      const newBudget = Number(targetProgram.budget_rupiah) - 250000
+      const newTasksFunded = (targetProgram.tasks_funded || 0) + 1
+      const newPoints = (userData?.points || 0) + (Number(targetProgram.reward_points) || 1000)
+
+      // 3. Update Database (User Points, CSR Program, and Task Status)
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({ points: newPoints })
+        .eq('id', task.user_id)
+      if (userUpdateError) throw new Error(`Gagal memperbarui poin warga: ${userUpdateError.message}`)
+
+      const { error: programUpdateError } = await supabase
+        .from('csr_programs')
+        .update({
+          budget_rupiah: newBudget,
+          tasks_funded: newTasksFunded
+        })
+        .eq('id', targetProgram.id)
+      if (programUpdateError) throw new Error(`Gagal memotong anggaran CSR: ${programUpdateError.message}`)
+
+      const { error: taskUpdateError } = await supabase
+        .from('tasks')
+        .update({ 
+          status: 'approved',
+          company_name: targetProgram.company_name
+        })
+        .eq('id', task.id)
+      if (taskUpdateError) throw new Error(`Gagal memperbarui status tugas: ${taskUpdateError.message}`)
+
+      alert(`Tugas sukses disetujui! Didanai oleh "${targetProgram.company_name}". Relawan mendapat 1.000 poin.`)
+      router.invalidate()
+    } catch (err: any) {
+      alert(`Gagal memproses verifikasi: ${err.message || String(err)}`)
+    } finally {
+      setIsVerifying(null)
+    }
+  }
 
   // Metrics calculation
   const totalBudgetAllocated = programs.reduce(
@@ -107,11 +238,20 @@ function CorporateDashboard() {
       newErrors.companyName = 'Nama perusahaan wajib diisi'
     }
 
+    if (!location.trim()) {
+      newErrors.location = 'Lokasi target program wajib diisi'
+    }
+
     const budgetNum = Number(budget)
     if (!budget || isNaN(budgetNum) || budgetNum <= 0) {
       newErrors.budget = 'Anggaran harus berupa angka lebih besar dari 0'
     } else if (budgetNum < 1000000) {
       newErrors.budget = 'Minimal anggaran adalah Rp 1.000.000'
+    }
+
+    const rewardPointsNum = Number(rewardPoints)
+    if (!rewardPoints || isNaN(rewardPointsNum) || rewardPointsNum <= 0) {
+      newErrors.rewardPoints = 'Poin hadiah harus berupa angka lebih besar dari 0'
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -124,10 +264,17 @@ function CorporateDashboard() {
     setSubmitError('')
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Sesi login tidak valid')
+
       const { error } = await supabase.from('csr_programs').insert({
         company_name: companyName.trim(),
         budget_rupiah: budgetNum,
         tasks_funded: 0,
+        focus_category: focusCategory,
+        location: location.trim(),
+        reward_points: rewardPointsNum,
+        user_id: session.user.id,
       })
 
       if (error) throw error
@@ -135,6 +282,8 @@ function CorporateDashboard() {
       // Reset form
       setCompanyName('')
       setBudget('')
+      setLocation('')
+      setRewardPoints('1000')
       setIsFormOpen(false)
 
       // Invalidate routing query to trigger reload
@@ -334,13 +483,17 @@ function CorporateDashboard() {
                       >
                         <div className="flex items-center gap-4">
                           {task.photo_url ? (
-                            <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
+                            <button
+                              onClick={() => setPreviewTask(task)}
+                              className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200 cursor-zoom-in hover:opacity-80 transition-opacity"
+                              title="Klik untuk memperbesar bukti foto"
+                            >
                               <img
                                 src={task.photo_url}
                                 alt="Task proof"
                                 className="h-full w-full object-cover"
                               />
-                            </div>
+                            </button>
                           ) : (
                             <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
                               <Target className="h-5 w-5 text-slate-400" />
@@ -350,27 +503,54 @@ function CorporateDashboard() {
                             <span className="font-medium text-slate-900 text-sm sm:text-base">
                               {task.users?.email || 'Relawan Anonim'}
                             </span>
-                            <span className="text-sm text-slate-500">
+                            <span className="text-sm text-slate-550 font-medium">
                               {task.type}
                             </span>
+                            {task.location && (
+                              <span className="text-xs text-slate-500 font-medium">
+                                Lokasi: {task.location}
+                              </span>
+                            )}
+                            {task.description && (
+                              <span className="text-xs text-slate-400 italic">
+                                "{task.description}"
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              task.status === 'approved'
-                                ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20'
-                                : task.status === 'rejected'
-                                  ? 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/10'
-                                  : 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20'
-                            }`}
-                          >
-                            {task.status.toUpperCase()}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            {new Date(task.created_at).toLocaleDateString(
-                              'id-ID',
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-2">
+                            {task.status === 'pending' ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => handleVerifyTask(task, 'approved')}
+                                  disabled={isVerifying === task.id}
+                                  className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition duration-150 cursor-pointer disabled:opacity-50"
+                                >
+                                  Setuju
+                                </button>
+                                <button
+                                  onClick={() => handleVerifyTask(task, 'rejected')}
+                                  disabled={isVerifying === task.id}
+                                  className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 transition duration-150 cursor-pointer disabled:opacity-50"
+                                >
+                                  Tolak
+                                </button>
+                              </div>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                  task.status === 'approved'
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20'
+                                    : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/10'
+                                }`}
+                              >
+                                {task.status.toUpperCase()}
+                              </span>
                             )}
+                          </div>
+                          <span className="text-xs text-slate-400">
+                            {new Date(task.created_at).toLocaleDateString('id-ID')}
                           </span>
                         </div>
                       </li>
@@ -414,15 +594,38 @@ function CorporateDashboard() {
                         className="py-4 first:pt-0 last:pb-0"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-slate-900">
-                            {program.company_name}
-                          </span>
-                          <span className="font-semibold text-primary text-sm">
-                            {formatCurrency(program.budget_rupiah)}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-900">
+                              {program.company_name}
+                            </span>
+                            <div className="flex flex-col gap-0.5 mt-1">
+                              {program.focus_category && (
+                                <span className="text-[10px] text-primary font-semibold">
+                                  Fokus: {program.focus_category}
+                                </span>
+                              )}
+                              {program.location && (
+                                <span className="text-[10px] text-slate-500 font-medium">
+                                  Lokasi Target: {program.location}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-primary text-sm">
+                              {formatCurrency(program.budget_rupiah)}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteProgram(program.id)}
+                              className="text-slate-400 hover:text-red-550 cursor-pointer p-1 rounded-lg hover:bg-red-50 transition-colors"
+                              title="Hapus Program"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
-                          <span>{program.tasks_funded} Tugas didanai</span>
+                          <span>{program.tasks_funded} Tugas didanai ({program.reward_points || 1000} Poin/Aksi)</span>
                           <span>
                             {new Date(program.created_at).toLocaleDateString(
                               'id-ID',
@@ -492,6 +695,41 @@ function CorporateDashboard() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
+                    Fokus Kategori Aksi
+                  </label>
+                  <select
+                    value={focusCategory}
+                    onChange={(e) => setFocusCategory(e.target.value)}
+                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                  >
+                    {taskCategories.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Lokasi Target Program CSR
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. Taman Hutan Raya Dago / Kali Ciliwung RT 03"
+                    className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                  />
+                  {errors.location && (
+                    <p className="mt-1 text-xs text-red-600">
+                      {errors.location}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
                     Alokasi Anggaran (Rupiah)
                   </label>
                   <div className="relative mt-1">
@@ -508,6 +746,22 @@ function CorporateDashboard() {
                   </div>
                   {errors.budget && (
                     <p className="mt-1 text-xs text-red-600">{errors.budget}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Poin Hadiah per Aksi Relawan
+                  </label>
+                  <input
+                    type="number"
+                    value={rewardPoints}
+                    onChange={(e) => setRewardPoints(e.target.value)}
+                    placeholder="e.g. 1000"
+                    className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                  />
+                  {errors.rewardPoints && (
+                    <p className="mt-1 text-xs text-red-600">{errors.rewardPoints}</p>
                   )}
                 </div>
 
@@ -529,6 +783,52 @@ function CorporateDashboard() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Image Lightbox Modal */}
+      {previewTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl overflow-hidden rounded-3xl bg-white p-6 shadow-xl border border-slate-100 flex flex-col">
+            <button
+              onClick={() => setPreviewTask(null)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-655 cursor-pointer p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-lg font-bold text-slate-955 pr-8 truncate">
+              Bukti Aksi: {previewTask.type}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Oleh: {previewTask.users?.email || 'Relawan Anonim'}
+            </p>
+
+            <div className="mt-4 rounded-2xl overflow-hidden border border-slate-150 aspect-video max-h-[60vh] flex items-center justify-center bg-slate-950">
+              <img 
+                src={previewTask.photo_url} 
+                alt="Aksi Relawan Full Resolution" 
+                className="max-w-full max-h-full object-contain" 
+              />
+            </div>
+
+            <div className="mt-4 space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-2xl">
+              {previewTask.location && (
+                <p>
+                  <span className="font-bold text-slate-900">Lokasi:</span> {previewTask.location}
+                </p>
+              )}
+              {previewTask.description && (
+                <p>
+                  <span className="font-bold text-slate-900">Deskripsi:</span> "{previewTask.description}"
+                </p>
+              )}
+              <p className="text-xs text-slate-500 mt-1 border-t border-slate-200/60 pt-2 flex items-center justify-between">
+                <span>Tanggal Laporan: {new Date(previewTask.created_at).toLocaleString('id-ID')}</span>
+                <span className="capitalize font-semibold text-primary">Status: {previewTask.status}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
