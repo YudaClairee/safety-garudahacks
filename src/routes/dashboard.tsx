@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute, Outlet, redirect, useRouter } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useRouter,
+} from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/dashboard')({
@@ -8,7 +13,9 @@ export const Route = createFileRoute('/dashboard')({
       return
     }
 
-    const { data: { session } } = await supabase.auth.getSession()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
     if (!session) {
       throw redirect({
@@ -20,13 +27,16 @@ export const Route = createFileRoute('/dashboard')({
     }
 
     // If accessing exactly /dashboard, redirect to the correct sub-route based on role
-    if (location.pathname === '/dashboard' || location.pathname === '/dashboard/') {
+    if (
+      location.pathname === '/dashboard' ||
+      location.pathname === '/dashboard/'
+    ) {
       const { data: user, error } = await supabase
         .from('users')
         .select('role')
         .eq('id', session.user.id)
         .single()
-      
+
       if (error) {
         console.error('Error fetching user role:', error)
       }
@@ -49,7 +59,9 @@ function DashboardPage() {
     let isMounted = true
 
     async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
       if (!isMounted) return
 
@@ -63,7 +75,10 @@ function DashboardPage() {
         return
       }
 
-      if (window.location.pathname === '/dashboard' || window.location.pathname === '/dashboard/') {
+      if (
+        window.location.pathname === '/dashboard' ||
+        window.location.pathname === '/dashboard/'
+      ) {
         const { data: user, error } = await supabase
           .from('users')
           .select('role')
@@ -77,7 +92,10 @@ function DashboardPage() {
         }
 
         router.navigate({
-          to: user?.role === 'corporate' ? '/dashboard/corporate' : '/dashboard/warga',
+          to:
+            user?.role === 'corporate'
+              ? '/dashboard/corporate'
+              : '/dashboard/warga',
           replace: true,
         })
         return

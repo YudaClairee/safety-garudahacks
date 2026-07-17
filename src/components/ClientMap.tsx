@@ -35,9 +35,9 @@ const createSvgIcon = (color: string) => {
 
 const icons = {
   approved: createSvgIcon('#10b981'), // Emerald-500
-  pending: createSvgIcon('#f59e0b'),  // Amber-500
+  pending: createSvgIcon('#f59e0b'), // Amber-500
   rejected: createSvgIcon('#ef4444'), // Red-500
-  default: createSvgIcon('#3b82f6'),  // Blue-500
+  default: createSvgIcon('#3b82f6'), // Blue-500
 }
 
 interface MapTask {
@@ -92,7 +92,7 @@ function HeatLayer({ points }: { points: [number, number, number][] }) {
         0.4: '#3b82f6', // Biru (dingin)
         0.65: '#eab308', // Kuning (sedang)
         1.0: '#ef4444', // Merah (panas)
-      }
+      },
     })
 
     heatLayer.addTo(map)
@@ -105,20 +105,29 @@ function HeatLayer({ points }: { points: [number, number, number][] }) {
   return null
 }
 
-export default function ClientMap({ mode, tasks, height = '400px' }: ClientMapProps) {
+export default function ClientMap({
+  mode,
+  tasks,
+  height = '400px',
+}: ClientMapProps) {
   const [showMarkersOnHeatmap, setShowMarkersOnHeatmap] = useState(true)
 
   // Filter tasks with valid GPS
-  const validTasks = tasks.filter(t => t.latitude != null && t.longitude != null)
-  
+  const validTasks = tasks.filter(
+    (t) => t.latitude != null && t.longitude != null,
+  )
+
   // Format coordinates for Leaflet bounds [lat, lng]
-  const coordinates: [number, number][] = validTasks.map(t => [Number(t.latitude), Number(t.longitude)])
-  
-  // Format points for heatmap [lat, lng, intensity]
-  const heatPoints: [number, number, number][] = validTasks.map(t => [
+  const coordinates: [number, number][] = validTasks.map((t) => [
     Number(t.latitude),
     Number(t.longitude),
-    0.8 // Standard intensity
+  ])
+
+  // Format points for heatmap [lat, lng, intensity]
+  const heatPoints: [number, number, number][] = validTasks.map((t) => [
+    Number(t.latitude),
+    Number(t.longitude),
+    0.8, // Standard intensity
   ])
 
   // Center fallback to Jakarta area if no coordinates
@@ -136,27 +145,48 @@ export default function ClientMap({ mode, tasks, height = '400px' }: ClientMapPr
             onChange={(e) => setShowMarkersOnHeatmap(e.target.checked)}
             className="h-4.5 w-4.5 rounded border-slate-300 text-primary focus:ring-primary/20 cursor-pointer"
           />
-          <label htmlFor="toggle-markers" className="cursor-pointer select-none">
+          <label
+            htmlFor="toggle-markers"
+            className="cursor-pointer select-none"
+          >
             Tampilkan Marker Detail
           </label>
         </div>
       )}
 
       {validTasks.length === 0 ? (
-        <div 
-          style={{ height }} 
+        <div
+          style={{ height }}
           className="flex flex-col items-center justify-center text-center p-6 gap-3 text-slate-500"
         >
           <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+              />
             </svg>
           </div>
           <div>
-            <h4 className="text-sm font-bold text-slate-800">Tidak Ada Data Lokasi</h4>
+            <h4 className="text-sm font-bold text-slate-800">
+              Tidak Ada Data Lokasi
+            </h4>
             <p className="text-xs mt-1 text-slate-400 max-w-xs leading-relaxed">
-              Tugas relawan yang disetujui tidak memiliki koordinat GPS yang valid untuk ditampilkan di peta.
+              Tugas relawan yang disetujui tidak memiliki koordinat GPS yang
+              valid untuk ditampilkan di peta.
             </p>
           </div>
         </div>
@@ -171,35 +201,45 @@ export default function ClientMap({ mode, tasks, height = '400px' }: ClientMapPr
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          
+
           <AutoCenter coordinates={coordinates} />
 
           {mode === 'heatmap' && <HeatLayer points={heatPoints} />}
 
           {/* Render markers: Always in 'markers' mode, and optionally in 'heatmap' mode */}
-          {(mode === 'markers' || showMarkersOnHeatmap) && 
+          {(mode === 'markers' || showMarkersOnHeatmap) &&
             validTasks.map((task) => {
-              const markerIcon = task.status === 'approved' ? icons.approved : (task.status === 'rejected' ? icons.rejected : icons.pending)
+              const markerIcon =
+                task.status === 'approved'
+                  ? icons.approved
+                  : task.status === 'rejected'
+                    ? icons.rejected
+                    : icons.pending
               const taskCat = getTaskCategory(task.type)
-              
+
               return (
-                <Marker 
-                  key={task.id} 
+                <Marker
+                  key={task.id}
                   position={[Number(task.latitude), Number(task.longitude)]}
                   icon={markerIcon}
                 >
                   <Popup>
                     <div className="w-56 text-slate-800">
                       <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5 mb-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          task.status === 'approved' 
-                            ? 'bg-emerald-50 text-emerald-700' 
-                            : 'bg-amber-50 text-amber-700'
-                        }`}>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            task.status === 'approved'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
                           {task.status === 'approved' ? 'Disetujui' : 'Pending'}
                         </span>
                         <span className="text-[9px] text-slate-400 font-semibold">
-                          {new Date(task.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                          {new Date(task.created_at).toLocaleDateString(
+                            'id-ID',
+                            { day: '2-digit', month: 'short' },
+                          )}
                         </span>
                       </div>
                       <h4 className="text-xs font-extrabold leading-snug">
@@ -207,12 +247,18 @@ export default function ClientMap({ mode, tasks, height = '400px' }: ClientMapPr
                       </h4>
                       {task.company_name && (
                         <p className="text-[10px] text-slate-550 font-medium mt-1">
-                          Sponsor: <span className="font-semibold text-slate-700">{task.company_name}</span>
+                          Sponsor:{' '}
+                          <span className="font-semibold text-slate-700">
+                            {task.company_name}
+                          </span>
                         </p>
                       )}
                       {task.location && (
                         <p className="text-[10px] text-slate-550 font-medium">
-                          Area: <span className="font-semibold text-slate-700">{task.location}</span>
+                          Area:{' '}
+                          <span className="font-semibold text-slate-700">
+                            {task.location}
+                          </span>
                         </p>
                       )}
                       {task.description && (
@@ -222,9 +268,9 @@ export default function ClientMap({ mode, tasks, height = '400px' }: ClientMapPr
                       )}
                       {task.photo_url && (
                         <div className="mt-2.5 rounded-lg overflow-hidden border border-slate-205 h-24 bg-slate-100 flex items-center justify-center">
-                          <img 
-                            src={task.photo_url} 
-                            alt="Bukti aksi" 
+                          <img
+                            src={task.photo_url}
+                            alt="Bukti aksi"
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -233,8 +279,7 @@ export default function ClientMap({ mode, tasks, height = '400px' }: ClientMapPr
                   </Popup>
                 </Marker>
               )
-            })
-          }
+            })}
         </MapContainer>
       )}
     </div>
