@@ -65,11 +65,27 @@ export const Route = createFileRoute('/dashboard/warga')({
 })
 
 const rewards = [
-  { id: '1', name: 'Saldo GoPay Rp 25.000', cost: 10000, provider: 'GoPay' },
-  { id: '2', name: 'Saldo GoPay Rp 50.000', cost: 18000, provider: 'GoPay' },
-  { id: '3', name: 'Pulsa Seluler Rp 25.000', cost: 9500, provider: 'Telkomsel/Indosat/XL' },
-  { id: '4', name: 'Voucher Listrik PLN Rp 50.000', cost: 19000, provider: 'PLN' },
-  { id: '5', name: 'Voucher Sembako Rp 100.000', cost: 35000, provider: 'Indomaret' },
+  {
+    id: '1',
+    name: 'Voucher Paket Sembako',
+    cost: 12000,
+    provider: 'Kebutuhan Pangan',
+    description: 'Dukungan kebutuhan pangan pokok untuk rumah tangga yang membutuhkan.',
+  },
+  {
+    id: '2',
+    name: 'Token Listrik & BPJS Kesehatan',
+    cost: 18000,
+    provider: 'Utilitas & Proteksi Dasar',
+    description: 'Bantuan tagihan dasar dan perlindungan kesehatan agar beban darurat lebih ringan.',
+  },
+  {
+    id: '3',
+    name: 'Cash Out E-Wallet (DANA / OVO / GoPay)',
+    cost: 25000,
+    provider: 'Dompet Digital',
+    description: 'Pencairan fleksibel untuk kebutuhan mendesak via dompet digital pilihan Anda.',
+  },
 ]
 
 function WargaRoute() {
@@ -201,10 +217,10 @@ function WargaRoute() {
 
   function handleClaimReward(rewardName: string, cost: number) {
     if (points < cost) {
-      alert('Poin Kebaikan Anda tidak cukup untuk menukarkan penghargaan ini.')
+      alert('Saldo Safety Net Anda tidak cukup untuk menukarkan opsi ini.')
       return
     }
-    setSuccessClaim(`Selamat! Anda telah sukses menukarkan ${cost.toLocaleString('id-ID')} poin untuk "${rewardName}". Kode e-voucher akan dikirim ke email Anda.`)
+    setSuccessClaim(`Selamat! Anda telah sukses menukarkan ${cost.toLocaleString('id-ID')} poin Safety Net untuk "${rewardName}". Kode e-voucher akan dikirim ke email Anda.`)
   }
 
   return (
@@ -215,9 +231,14 @@ function WargaRoute() {
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
               <img src="/logojalan-transparant.png" alt="Jalan Logo" className="h-10 w-auto object-contain" />
-              <span className="text-xl font-bold tracking-tight text-primary">
-                Jalan Warga
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xl font-bold tracking-tight text-primary">
+                  Jalan Warga
+                </span>
+                <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                  Cash-for-Work Safety Net
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-4 text-sm font-medium text-slate-650">
               <button
@@ -241,14 +262,14 @@ function WargaRoute() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">Saldo Warga</p>
-                <h1 className="mt-3 text-3xl font-semibold tracking-tight">Poin Kebaikan</h1>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight">Saldo Safety Net</h1>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-                  Ini adalah saldo poin kebaikan Anda yang dikumpulkan dari verifikasi kontribusi aksi relawan Anda.
+                  Ini adalah saldo Safety Net Anda yang dikumpulkan dari verifikasi kontribusi aksi relawan Anda.
                 </p>
               </div>
-              <div className="rounded-[1.5rem] bg-primary px-6 py-5 text-white shadow-xl shadow-primary/20 sm:min-w-[12rem] flex flex-col justify-between">
+              <div className="rounded-[1.5rem] bg-primary px-6 py-5 text-white shadow-xl shadow-primary/20 sm:min-w-48 flex flex-col justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.28em] text-white/80">Total Poin</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-white/80">Total Safety Net</p>
                   <p className="mt-2 text-4xl font-bold leading-none">{points.toLocaleString('id-ID')}</p>
                 </div>
                 <button 
@@ -259,7 +280,7 @@ function WargaRoute() {
                   className="mt-4 flex w-full justify-center items-center gap-2 bg-white/20 hover:bg-white/30 text-xs font-semibold py-2 px-3 rounded-xl transition cursor-pointer"
                 >
                   <Gift className="h-3.5 w-3.5" />
-                  Tukar Rewards
+                  Tukar Safety Net
                 </button>
               </div>
             </div>
@@ -456,11 +477,11 @@ function WargaRoute() {
                   >
                     <div className="flex items-center gap-4">
                       {task.photoUrl ? (
-                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200 shadow-inner">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200 shadow-inner">
                           <img src={task.photoUrl} alt="Bukti Foto" className="h-full w-full object-cover" />
                         </div>
                       ) : (
-                        <div className="h-16 w-16 flex-shrink-0 flex items-center justify-center rounded-xl bg-slate-100 border border-slate-200">
+                        <div className="h-16 w-16 shrink-0 flex items-center justify-center rounded-xl bg-slate-100 border border-slate-200">
                           <ImageIcon className="h-6 w-6 text-slate-400" />
                         </div>
                       )}
@@ -483,7 +504,7 @@ function WargaRoute() {
                         )}
                         <p className="text-xs text-slate-400 mt-1">{task.createdAt}</p>
                       </div>
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${
                             task.status === 'Approved'
@@ -568,13 +589,13 @@ function WargaRoute() {
 
             <h2 className="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
               <Gift className="h-6 w-6 text-primary" />
-              Tukar Saldo & E-Voucher
+              Tukar Safety Net
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Gunakan Poin Kebaikan hasil kerja sosial Anda untuk menukarkan rewards di bawah.
+              Gunakan saldo Safety Net hasil kerja sosial Anda untuk menukarkan opsi di bawah.
             </p>
             <div className="mt-2 text-xs font-medium text-slate-700">
-              Saldo Poin Saat Ini: <span className="text-primary font-bold">{points.toLocaleString('id-ID')} Poin</span>
+              Saldo Safety Net Saat Ini: <span className="text-primary font-bold">{points.toLocaleString('id-ID')} Safety Net</span>
             </div>
 
             {successClaim ? (
@@ -598,10 +619,11 @@ function WargaRoute() {
                   >
                     <div>
                       <h4 className="text-sm font-bold text-slate-900">{reward.name}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5">Provider: {reward.provider}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{reward.provider}</p>
+                      <p className="text-xs text-slate-500 mt-1 leading-5">{reward.description}</p>
                     </div>
                     <div className="flex items-center gap-4 justify-between sm:justify-end">
-                      <span className="text-sm font-semibold text-primary">{reward.cost.toLocaleString('id-ID')} Poin</span>
+                      <span className="text-sm font-semibold text-primary">{reward.cost.toLocaleString('id-ID')} Safety Net</span>
                       <button
                         onClick={() => handleClaimReward(reward.name, reward.cost)}
                         disabled={points < reward.cost}
@@ -611,7 +633,7 @@ function WargaRoute() {
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
                       >
-                        Tukarkan
+                        Ambil
                       </button>
                     </div>
                   </div>
