@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { FormEvent, ChangeEvent } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { LogOut, Gift, X, Image as ImageIcon, CheckCircle2 } from 'lucide-react'
+import { LogOut, Gift, X, Image as ImageIcon, CheckCircle2, Camera, Compass, MapPin, RotateCw, Upload as UploadIcon } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
 import { getTaskCategory, taskCategories } from '@/lib/task-categories'
@@ -20,6 +20,9 @@ type TaskReport = {
   description?: string
   rewardType?: string
   rewardValue?: number
+  latitude?: number
+  longitude?: number
+  capturedAt?: string
 }
 
 type RedemptionRecord = {
@@ -46,7 +49,7 @@ export const Route = createFileRoute('/dashboard/warga')({
     
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, type, status, created_at, photo_url, company_name, location, description, reward_type, reward_value')
+      .select('id, type, status, created_at, photo_url, company_name, location, description, reward_type, reward_value, latitude, longitude, captured_at')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
 
@@ -121,6 +124,12 @@ export const Route = createFileRoute('/dashboard/warga')({
         description: t.description || '',
         rewardType,
         rewardValue,
+        latitude: t.latitude ? Number(t.latitude) : undefined,
+        longitude: t.longitude ? Number(t.longitude) : undefined,
+        capturedAt: t.captured_at ? new Date(t.captured_at).toLocaleString('id-ID', {
+          day: '2-digit', month: 'short', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        }) : undefined,
         createdAt: new Date(t.created_at).toLocaleString('id-ID', {
           day: '2-digit', month: 'short', year: 'numeric',
           hour: '2-digit', minute: '2-digit'
@@ -208,6 +217,133 @@ function WargaRoute() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [registeringId, setRegisteringId] = useState<string | null>(null)
+
+  // Camera & Geolocation verification states
+  const [proofMode, setProofMode] = useState<'camera' | 'upload'>('camera')
+  const [latitude, setLatitude] = useState<number | null>(null)
+  const [longitude, setLongitude] = useState<number | null>(null)
+  const [capturedAt, setCapturedAt] = useState<string | null>(null)
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>('idle')
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop())
+      }
+    }
+  }, [cameraStream])
+
+  async function startCameraAndLocation() {
+    setCameraError(null)
+    setLocationStatus('fetching')
+    setError(null)
+    setLatitude(null)
+    setLongitude(null)
+
+    // Request Location first or simultaneously
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLatitude(position.coords.latitude)
+          setLongitude(position.coords.longitude)
+          setLocationStatus('success')
+        },
+        (err) => {
+          console.error('Geolocation error:', err)
+          setLocationStatus('error')
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      )
+    } else {
+      setLocationStatus('error')
+    }
+
+    // Start video stream
+    try {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop())
+      }
+
+      // Request user camera (facingMode user for selfie)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      })
+
+      setCameraStream(stream)
+      setIsCameraActive(true)
+
+      // Use a timeout to let the video element mount/update
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+      }, 100)
+    } catch (err: any) {
+      console.error('Camera error:', err)
+      setCameraError('Gagal mengakses kamera. Pastikan memberikan izin kamera di browser Anda.')
+      setIsCameraActive(false)
+    }
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop())
+      setCameraStream(null)
+    }
+    setIsCameraActive(false)
+  }
+
+  function handleCapture() {
+    if (!videoRef.current) return
+
+    const video = videoRef.current
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      // Mirror snapshot because we scale video element
+      ctx.translate(canvas.width, 0)
+      ctx.scale(-1, 1)
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      // Reset transform
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const file = new File([blob], `selfie_${Date.now()}.jpg`, { type: 'image/jpeg' })
+          setPhoto(file)
+          setPhotoPreview(canvas.toDataURL('image/jpeg'))
+          setCapturedAt(new Date().toISOString())
+          stopCamera()
+        }
+      }, 'image/jpeg', 0.92)
+    }
+  }
+
+  function handleRetake() {
+    setPhoto(null)
+    setPhotoPreview(null)
+    setCapturedAt(null)
+    startCameraAndLocation()
+  }
+
+  function handleModeChange(mode: 'camera' | 'upload') {
+    setProofMode(mode)
+    if (mode === 'upload') {
+      stopCamera()
+      // Clear coordinate state to avoid posting false camera coordinates
+      setLatitude(null)
+      setLongitude(null)
+      setCapturedAt(null)
+    }
+  }
 
   async function handleRegisterProgram(programId: string) {
     setRegisteringId(programId)
@@ -371,6 +507,9 @@ function WargaRoute() {
           description: description.trim(),
           reward_type: finalRewardType || null,
           reward_value: finalRewardValue,
+          latitude: latitude || null,
+          longitude: longitude || null,
+          captured_at: capturedAt || null,
         })
       
       if (insertError) throw insertError
@@ -385,6 +524,12 @@ function WargaRoute() {
       setDescription('')
       setSelectedProgramId('general')
       setCategory(taskCategories[0].value)
+
+      // Reset Camera & GPS states
+      setLatitude(null)
+      setLongitude(null)
+      setCapturedAt(null)
+      stopCamera()
       
       // Invalidate to refresh loader data
       router.invalidate()
@@ -855,30 +1000,203 @@ function WargaRoute() {
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="photo" className="block text-sm font-medium text-foreground">
-                      Unggah Bukti Foto Aksi
+                    <label className="block text-sm font-medium text-foreground">
+                      Kirim Bukti Aksi (Selfie & Lokasi)
                     </label>
+
+                    {/* Mode Selector Tabs */}
+                    <div className="flex gap-2 p-1 bg-slate-100 rounded-xl mb-4 max-w-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleModeChange('camera')}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          proofMode === 'camera'
+                            ? 'bg-white text-primary shadow-sm'
+                            : 'text-slate-650 hover:text-slate-900 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                        Kamera Selfie
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleModeChange('upload')}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          proofMode === 'upload'
+                            ? 'bg-white text-primary shadow-sm'
+                            : 'text-slate-650 hover:text-slate-900 hover:bg-slate-50'
+                        }`}
+                      >
+                        <UploadIcon className="h-3.5 w-3.5" />
+                        Unggah File
+                      </button>
+                    </div>
+
                     <div className="flex flex-col gap-4">
-                      <input
-                        id="photo"
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                      />
-                      {photoPreview && (
-                        <div className="relative w-full max-w-sm rounded-2xl overflow-hidden border border-slate-200 aspect-video">
-                          <img src={photoPreview} alt="Selected proof preview" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPhoto(null)
-                              setPhotoPreview(null)
-                            }}
-                            className="absolute top-2 right-2 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full p-1.5 transition cursor-pointer"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
+                      {proofMode === 'camera' ? (
+                        <>
+                          {photoPreview ? (
+                            <div className="relative w-full max-w-sm rounded-2xl overflow-hidden border border-slate-200 aspect-video">
+                              <img src={photoPreview} alt="Bukti Selfie Terambil" className="w-full h-full object-cover scale-x-[-1]" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPhoto(null)
+                                  setPhotoPreview(null)
+                                  setCapturedAt(null)
+                                }}
+                                className="absolute top-2 right-2 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full p-1.5 transition cursor-pointer"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              {!isCameraActive ? (
+                                <div className="border border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50/50 flex flex-col items-center justify-center gap-3 text-center">
+                                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                    <Camera className="h-6 w-6" />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-slate-800">Verifikasi Kamera Selfie & GPS</h4>
+                                    <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                                      Sponsor mewajibkan relawan melakukan selfie di lokasi aksi untuk validasi langsung.
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={startCameraAndLocation}
+                                    className="mt-1 inline-flex items-center gap-2 bg-primary hover:bg-primary/95 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-sm transition-all cursor-pointer"
+                                  >
+                                    Aktifkan Kamera & GPS
+                                  </button>
+                                  {cameraError && (
+                                    <p className="text-xs text-red-505 mt-1 font-medium bg-red-50 border border-red-100 rounded-lg py-1.5 px-3">
+                                      {cameraError}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="relative w-full max-w-md mx-auto aspect-video rounded-2xl overflow-hidden bg-slate-950 shadow-inner group">
+                                  <video
+                                    ref={videoRef}
+                                    autoPlay
+                                    playsInline
+                                    className="w-full h-full object-cover scale-x-[-1]"
+                                  />
+                                  {/* Circular overlay for selfie framing */}
+                                  <div className="absolute inset-0 border-[3px] border-dashed border-white/40 rounded-2xl pointer-events-none flex items-center justify-center">
+                                    <div className="w-[180px] h-[180px] border-2 border-white/60 rounded-full bg-transparent flex items-center justify-center">
+                                      <span className="text-[10px] text-white/80 bg-black/40 px-2 py-0.5 rounded-full font-medium tracking-wide">Posisikan Wajah</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Floating Location indicator */}
+                                  <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white py-1.5 px-3 rounded-full text-[10px] font-semibold tracking-wide flex items-center gap-1.5 shadow-sm">
+                                    {locationStatus === 'fetching' ? (
+                                      <>
+                                        <RotateCw className="h-3 w-3 animate-spin text-amber-400" />
+                                        <span>Mengunci GPS...</span>
+                                      </>
+                                    ) : locationStatus === 'success' ? (
+                                      <>
+                                        <MapPin className="h-3 w-3 text-emerald-400 fill-emerald-400" />
+                                        <span>GPS Terkunci</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Compass className="h-3 w-3 text-rose-455" />
+                                        <span>GPS Gagal (Tetap Ambil Foto)</span>
+                                      </>
+                                    )}
+                                  </div>
+
+                                  {/* Shutter controls */}
+                                  <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-4">
+                                    <button
+                                      type="button"
+                                      onClick={stopCamera}
+                                      className="bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-semibold py-2 px-3 rounded-xl cursor-pointer transition-colors"
+                                    >
+                                      Batal
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={handleCapture}
+                                      disabled={locationStatus === 'fetching'}
+                                      className="w-14 h-14 rounded-full bg-white border-4 border-slate-300 hover:border-primary flex items-center justify-center cursor-pointer transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                                      title="Ambil Foto"
+                                    >
+                                      <div className="w-10 h-10 rounded-full bg-red-650 hover:bg-red-500 transition-colors" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <input
+                            id="photo"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          />
+                          {photoPreview && (
+                            <div className="relative w-full max-w-sm rounded-2xl overflow-hidden border border-slate-200 aspect-video">
+                              <img src={photoPreview} alt="Selected proof preview" className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPhoto(null)
+                                  setPhotoPreview(null)
+                                }}
+                                className="absolute top-2 right-2 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full p-1.5 transition cursor-pointer"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* GPS & Timestamp verification display */}
+                      {(latitude !== null || longitude !== null || capturedAt !== null) && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                          <div className="space-y-1">
+                            <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wide">Metadata Keamanan Aksi</h5>
+                            <div className="flex flex-col gap-1 mt-1.5 text-xs text-slate-655 font-medium">
+                              {latitude !== null && longitude !== null ? (
+                                <p className="flex items-center gap-1.5">
+                                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                                  <span>Koordinat: <span className="font-bold text-slate-800">{latitude.toFixed(6)}, {longitude.toFixed(6)}</span></span>
+                                </p>
+                              ) : (
+                                <p className="flex items-center gap-1.5 text-amber-600">
+                                  <Compass className="h-3.5 w-3.5 text-amber-500" />
+                                  <span>Lokasi GPS tidak terdeteksi (Fallback Lokasi Manual)</span>
+                                </p>
+                              )}
+                              {capturedAt && (
+                                <p className="flex items-center gap-1.5">
+                                  <RotateCw className="h-3.5 w-3.5 text-primary" />
+                                  <span>Waktu Pengambilan: <span className="font-bold text-slate-800">{new Date(capturedAt).toLocaleString('id-ID')}</span></span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {proofMode === 'camera' && photoPreview && (
+                            <button
+                              type="button"
+                              onClick={handleRetake}
+                              className="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <RotateCw className="h-3.5 w-3.5" />
+                              Foto Ulang
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -948,12 +1266,23 @@ function WargaRoute() {
                             Lokasi: {task.location}
                           </p>
                         )}
+                        {task.latitude !== undefined && task.longitude !== undefined && (
+                          <p className="text-[11px] text-slate-550 flex items-center gap-1 mt-0.5 font-medium">
+                            <MapPin className="h-3 w-3 text-primary inline" />
+                            <span>Koordinat: <a href={`https://www.google.com/maps?q=${task.latitude},${task.longitude}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">{task.latitude.toFixed(5)}, {task.longitude.toFixed(5)}</a></span>
+                          </p>
+                        )}
                         {task.description && (
                           <p className="text-xs text-slate-500 mt-0.5 italic">
                             "{task.description}"
                           </p>
                         )}
-                        <p className="text-xs text-slate-400 mt-1">{task.createdAt}</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-2.5 pt-1.5 border-t border-slate-200/40">
+                          <span className="text-[10px] text-slate-400">Dilaporkan: {task.createdAt}</span>
+                          {task.capturedAt && (
+                            <span className="text-[9px] text-slate-550 bg-slate-100 px-2 py-0.5 rounded-full font-medium inline-block w-fit">Waktu Foto: {task.capturedAt}</span>
+                          )}
+                        </div>
                       </div>
                       <div className="shrink-0">
                         <span

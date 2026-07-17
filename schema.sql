@@ -38,6 +38,9 @@ CREATE TABLE public.tasks (
   description TEXT,
   reward_type TEXT,
   reward_value NUMERIC,
+  latitude NUMERIC,
+  longitude NUMERIC,
+  captured_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

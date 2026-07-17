@@ -13,6 +13,8 @@ import {
   X,
   Sparkles,
   Trash2,
+  MapPin,
+  Clock,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/dashboard/corporate')({
@@ -28,7 +30,7 @@ export const Route = createFileRoute('/dashboard/corporate')({
 
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
-      .select('id, type, status, photo_url, created_at, location, description, user_id, company_name, users(email)')
+      .select('id, type, status, photo_url, created_at, location, description, user_id, company_name, latitude, longitude, captured_at, users(email)')
       .order('created_at', { ascending: false })
 
     if (programsError)
@@ -764,6 +766,12 @@ function CorporateDashboard() {
                                 Lokasi: {task.location}
                               </span>
                             )}
+                            {task.latitude !== null && task.longitude !== null && task.latitude !== undefined && task.longitude !== undefined && (
+                              <span className="text-xs text-slate-550 font-medium flex items-center gap-1">
+                                <MapPin className="h-3 w-3 text-primary" />
+                                <span>GPS: <a href={`https://www.google.com/maps?q=${task.latitude},${task.longitude}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">{Number(task.latitude).toFixed(5)}, {Number(task.longitude).toFixed(5)}</a></span>
+                              </span>
+                            )}
                             {task.description && (
                               <span className="text-xs text-slate-400 italic">
                                 "{task.description}"
@@ -802,9 +810,17 @@ function CorporateDashboard() {
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-slate-400">
-                            {new Date(task.created_at).toLocaleDateString('id-ID')}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-[11px] text-slate-400">
+                              Lapor: {new Date(task.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {task.captured_at && (
+                              <span className="text-[9px] text-slate-500 font-semibold bg-slate-50 border border-slate-200/60 rounded-full px-2 py-0.5 flex items-center gap-1">
+                                <Clock className="h-2.5 w-2.5 text-primary" />
+                                <span>Foto: {new Date(task.captured_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </li>
                     ))}
@@ -1159,19 +1175,46 @@ function CorporateDashboard() {
 
             <div className="mt-4 space-y-2 text-sm text-slate-700 bg-slate-50 p-4 rounded-2xl">
               {previewTask.location && (
-                <p>
-                  <span className="font-bold text-slate-900">Lokasi:</span> {previewTask.location}
+                <p className="flex items-start gap-1.5">
+                  <span className="font-bold text-slate-900 shrink-0">Lokasi:</span>
+                  <span>{previewTask.location}</span>
+                </p>
+              )}
+              {previewTask.latitude !== null && previewTask.longitude !== null && previewTask.latitude !== undefined && previewTask.longitude !== undefined && (
+                <p className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-900 shrink-0">Koordinat GPS:</span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    <a
+                      href={`https://www.google.com/maps?q=${previewTask.latitude},${previewTask.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary font-semibold hover:underline"
+                    >
+                      {Number(previewTask.latitude).toFixed(6)}, {Number(previewTask.longitude).toFixed(6)}
+                    </a>
+                  </span>
                 </p>
               )}
               {previewTask.description && (
-                <p>
-                  <span className="font-bold text-slate-900">Deskripsi:</span> "{previewTask.description}"
+                <p className="flex items-start gap-1.5">
+                  <span className="font-bold text-slate-900 shrink-0">Deskripsi:</span>
+                  <span className="italic">"{previewTask.description}"</span>
                 </p>
               )}
-              <p className="text-xs text-slate-500 mt-1 border-t border-slate-200/60 pt-2 flex items-center justify-between">
-                <span>Tanggal Laporan: {new Date(previewTask.created_at).toLocaleString('id-ID')}</span>
+              <div className="text-xs text-slate-500 mt-2 border-t border-slate-200/60 pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Laporan: {new Date(previewTask.created_at).toLocaleString('id-ID')}</span>
+                </span>
+                {previewTask.captured_at && (
+                  <span className="flex items-center gap-1 text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-medium">
+                    <Clock className="h-3 w-3 text-primary" />
+                    <span>Waktu Foto: {new Date(previewTask.captured_at).toLocaleString('id-ID')}</span>
+                  </span>
+                )}
                 <span className="capitalize font-semibold text-primary">Status: {previewTask.status}</span>
-              </p>
+              </div>
             </div>
           </div>
         </div>
