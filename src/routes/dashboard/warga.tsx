@@ -662,7 +662,7 @@ function WargaRoute() {
     <div className="min-h-screen bg-slate-50 text-foreground">
       {/* Navbar / Header */}
       <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
               <img
@@ -674,12 +674,12 @@ function WargaRoute() {
                 <span className="text-xl font-bold tracking-tight text-primary">
                   Jalan Warga
                 </span>
-                <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                <span className="hidden md:inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
                   Cash-for-Work Safety Net
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-4 text-sm font-medium text-slate-650">
+            <div className="flex items-center gap-4 text-sm font-medium text-slate-600">
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-slate-700 transition-colors hover:bg-slate-200 cursor-pointer"
@@ -693,30 +693,30 @@ function WargaRoute() {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-7xl px-6 py-10">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Column */}
           <div className="lg:col-span-2 space-y-6">
-            <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">
+            <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white/95 p-5 sm:p-8 shadow-sm">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-2">
+                  <p className="text-xs sm:text-sm uppercase tracking-wider font-semibold text-muted-foreground">
                     Saldo Warga
                   </p>
-                  <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
                     Saldo Safety Net
                   </h1>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                  <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
                     Ini adalah saldo Safety Net Anda yang dikumpulkan dari
                     verifikasi kontribusi aksi relawan Anda.
                   </p>
                 </div>
-                <div className="rounded-[1.5rem] bg-primary px-6 py-5 text-white shadow-xl shadow-primary/20 sm:min-w-48 flex flex-col justify-between">
+                <div className="rounded-[1.5rem] bg-primary p-5 sm:p-6 text-white shadow-xl shadow-primary/20 sm:min-w-48 flex flex-col justify-between">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.28em] text-white/80">
+                    <p className="text-xs uppercase tracking-wider text-white/80 font-medium">
                       Total Safety Net
                     </p>
-                    <p className="mt-2 text-4xl font-bold leading-none">
+                    <p className="mt-2 text-3xl sm:text-4xl font-bold leading-none">
                       {points.toLocaleString('id-ID')}
                     </p>
                   </div>
@@ -735,24 +735,24 @@ function WargaRoute() {
               </div>
             </section>
 
-            <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white/95 p-5 sm:p-8 shadow-sm">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold">Voucher Saya</h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  <h2 className="text-xl font-semibold text-slate-900">Voucher Saya</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     Riwayat voucher internal yang sudah kamu klaim dari Safety
                     Net.
                   </p>
                 </div>
-                <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary shrink-0">
                   {redemptions.length} Klaim
                 </div>
               </div>
 
               <div className="mt-6 space-y-4">
                 {redemptions.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-slate-200 px-6 py-10 text-center">
-                    <p className="text-sm font-medium text-slate-600">
+                  <div className="rounded-2xl border border-dashed border-slate-200 px-6 py-10 text-center">
+                    <p className="text-sm font-medium text-slate-655">
                       Belum ada voucher yang diklaim.
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
@@ -763,33 +763,32 @@ function WargaRoute() {
                   redemptions.map((redeem) => (
                     <article
                       key={redeem.id}
-                      className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 shadow-sm"
+                      className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 sm:p-5 shadow-sm"
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="space-y-1">
-                          <h3 className="text-sm font-semibold text-slate-900">
+                        <div className="space-y-1.5">
+                          <h3 className="text-sm font-bold text-slate-900">
                             {redeem.rewardName}
                           </h3>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-550">
                             {redeem.rewardType} · Rp{' '}
                             {redeem.rewardValue.toLocaleString('id-ID')}
                           </p>
-                          <p className="text-[11px] text-slate-500">
+                          <p className="text-xs text-slate-500">
                             Kode Voucher:{' '}
-                            <span className="font-semibold tracking-wider text-slate-700">
+                            <span className="font-semibold tracking-wider text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
                               {redeem.voucherCode}
                             </span>
                           </p>
                         </div>
-                        <div className="flex flex-col items-start gap-2 sm:items-end">
-                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                          <span className="rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
                             {redeem.status.toUpperCase()}
                           </span>
-                          <span className="text-xs font-medium text-primary">
-                            {redeem.pointsCost.toLocaleString('id-ID')} Safety
-                            Net
+                          <span className="text-xs font-semibold text-primary">
+                            {redeem.pointsCost.toLocaleString('id-ID')} Safety Net
                           </span>
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-xs text-slate-400">
                             {redeem.createdAt}
                           </span>
                         </div>
@@ -799,12 +798,11 @@ function WargaRoute() {
                 )}
               </div>
             </section>
-
-            <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white/95 p-5 sm:p-8 shadow-sm">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold">Form Lapor Tugas</h2>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  <h2 className="text-xl font-semibold text-slate-900">Form Lapor Tugas</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     Pilih sponsor CSR program atau kirimkan laporan umum untuk
                     dicocokkan otomatis.
                   </p>
@@ -844,12 +842,7 @@ function WargaRoute() {
                           value={prog.id}
                           disabled={remaining <= 0}
                         >
-                          {prog.company_name} (Fokus: {prog.focus_category} |
-                          Lokasi: {prog.location || 'Semua Wilayah'} | +
-                          {Number(prog.reward_value || 0).toLocaleString(
-                            'id-ID',
-                          )}{' '}
-                          Poin | Sisa Kuota: {remaining} slot)
+                          {prog.company_name} - {prog.focus_category} (+{Number(prog.reward_value || 0).toLocaleString('id-ID')} Poin | Sisa: {remaining} slot)
                         </option>
                       )
                     })}
@@ -857,7 +850,7 @@ function WargaRoute() {
                 </div>
 
                 {isFormBlocked ? (
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-6 flex flex-col items-center text-center gap-3">
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-5 sm:p-6 flex flex-col items-center text-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
                       <Gift className="h-6 w-6" />
                     </div>
@@ -871,7 +864,7 @@ function WargaRoute() {
                               ? 'Kuota Program Habis'
                               : 'Aksi Belum Dimulai'}
                       </h3>
-                      <p className="mt-1 text-xs text-slate-500 max-w-sm leading-relaxed">
+                      <p className="mt-1 text-sm text-slate-500 max-w-sm leading-relaxed">
                         {!isRegisteredForSelected
                           ? `Anda harus mendaftar sebagai relawan untuk program "${selectedProgram?.company_name}" terlebih dahulu sebelum dapat mengirimkan laporan tugas.`
                           : selectedProgramHasEnded
@@ -915,7 +908,7 @@ function WargaRoute() {
                               type="button"
                               disabled={isDisabled}
                               onClick={() => setCategory(item.value)}
-                              className={`w-full rounded-2xl border px-4 py-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                              className={`w-full rounded-2xl border p-3.5 sm:p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                                 isSelected
                                   ? 'border-primary bg-primary/5 shadow-sm'
                                   : 'border-border bg-background hover:border-primary/40 hover:bg-slate-50'
@@ -932,12 +925,12 @@ function WargaRoute() {
                                   <p className="text-sm font-semibold text-foreground">
                                     {item.label}
                                   </p>
-                                  <p className="text-xs leading-5 text-muted-foreground">
+                                  <p className="text-xs sm:text-sm leading-relaxed text-muted-foreground">
                                     {item.description}
                                   </p>
                                 </div>
                                 <div
-                                  className={`mt-1 h-4 w-4 rounded-full border-2 ${
+                                  className={`mt-1 h-4 w-4 rounded-full border-2 shrink-0 ${
                                     isSelected
                                       ? 'border-primary bg-primary'
                                       : 'border-slate-300 bg-white'
@@ -950,7 +943,7 @@ function WargaRoute() {
                         })}
                       </div>
                       {selectedProgramId !== 'general' && (
-                        <p className="text-[11px] text-slate-500 italic mt-1">
+                        <p className="text-xs text-slate-500 italic mt-1">
                           *Kategori dikunci secara otomatis sesuai fokus CSR
                           sponsor yang Anda pilih.
                         </p>
@@ -973,10 +966,10 @@ function WargaRoute() {
                           placeholder="e.g. Jalan Dago RT 03 / Taman Hutan Kota"
                           value={location}
                           onChange={(e) => setLocation(e.target.value)}
-                          className="w-full rounded-2xl border border-border bg-background disabled:bg-slate-100 disabled:text-slate-550 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          className="w-full rounded-2xl border border-border bg-background disabled:bg-slate-100 disabled:text-slate-500 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                         />
                         {selectedProgramId !== 'general' && (
-                          <p className="text-[10px] text-slate-500 italic mt-1">
+                          <p className="text-xs text-slate-500 italic mt-1">
                             *Lokasi dikunci secara otomatis sesuai target
                             wilayah sponsor.
                           </p>
@@ -999,7 +992,6 @@ function WargaRoute() {
                         />
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-foreground">
                         Kirim Bukti Aksi (Selfie & Lokasi)
@@ -1013,7 +1005,7 @@ function WargaRoute() {
                           className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                             proofMode === 'camera'
                               ? 'bg-white text-primary shadow-sm'
-                              : 'text-slate-650 hover:text-slate-900 hover:bg-slate-50'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                           }`}
                         >
                           <Camera className="h-3.5 w-3.5" />
@@ -1025,7 +1017,7 @@ function WargaRoute() {
                           className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                             proofMode === 'upload'
                               ? 'bg-white text-primary shadow-sm'
-                              : 'text-slate-650 hover:text-slate-900 hover:bg-slate-50'
+                              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                           }`}
                         >
                           <UploadIcon className="h-3.5 w-3.5" />
@@ -1058,15 +1050,15 @@ function WargaRoute() {
                             ) : (
                               <>
                                 {!isCameraActive ? (
-                                  <div className="border border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50/50 flex flex-col items-center justify-center gap-3 text-center">
+                                  <div className="border border-dashed border-slate-200 rounded-2xl p-5 sm:p-6 bg-slate-50/50 flex flex-col items-center justify-center gap-3 text-center">
                                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                                       <Camera className="h-6 w-6" />
                                     </div>
-                                    <div>
+                                    <div className="space-y-1">
                                       <h4 className="text-sm font-semibold text-slate-800">
                                         Verifikasi Kamera Selfie & GPS
                                       </h4>
-                                      <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                                      <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xs leading-relaxed">
                                         Sponsor mewajibkan relawan melakukan
                                         selfie di lokasi aksi untuk validasi
                                         langsung.
@@ -1075,12 +1067,12 @@ function WargaRoute() {
                                     <button
                                       type="button"
                                       onClick={startCameraAndLocation}
-                                      className="mt-1 inline-flex items-center gap-2 bg-primary hover:bg-primary/95 text-white text-xs font-semibold py-2 px-4 rounded-xl shadow-sm transition-all cursor-pointer"
+                                      className="mt-1 inline-flex items-center gap-2 bg-primary hover:bg-primary/95 text-white text-xs sm:text-sm font-semibold py-2 px-4 rounded-xl shadow-sm transition-all cursor-pointer"
                                     >
                                       Aktifkan Kamera & GPS
                                     </button>
                                     {cameraError && (
-                                      <p className="text-xs text-red-505 mt-1 font-medium bg-red-50 border border-red-100 rounded-lg py-1.5 px-3">
+                                      <p className="text-xs sm:text-sm text-red-600 mt-1 font-medium bg-red-50 border border-red-100 rounded-lg py-1.5 px-3">
                                         {cameraError}
                                       </p>
                                     )}
@@ -1095,15 +1087,15 @@ function WargaRoute() {
                                     />
                                     {/* Circular overlay for selfie framing */}
                                     <div className="absolute inset-0 border-[3px] border-dashed border-white/40 rounded-2xl pointer-events-none flex items-center justify-center">
-                                      <div className="w-45 h-45 border-2 border-white/60 rounded-full bg-transparent flex items-center justify-center">
-                                        <span className="text-[10px] text-white/80 bg-black/40 px-2 py-0.5 rounded-full font-medium tracking-wide">
+                                      <div className="w-40 h-40 border-2 border-white/60 rounded-full bg-transparent flex items-center justify-center">
+                                        <span className="text-xs text-white/80 bg-black/40 px-2 py-0.5 rounded-full font-medium tracking-wide">
                                           Posisikan Wajah
                                         </span>
                                       </div>
                                     </div>
 
                                     {/* Floating Location indicator */}
-                                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white py-1.5 px-3 rounded-full text-[10px] font-semibold tracking-wide flex items-center gap-1.5 shadow-sm">
+                                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white py-1.5 px-3 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1.5 shadow-sm">
                                       {locationStatus === 'fetching' ? (
                                         <>
                                           <RotateCw className="h-3 w-3 animate-spin text-amber-400" />
@@ -1116,7 +1108,7 @@ function WargaRoute() {
                                         </>
                                       ) : (
                                         <>
-                                          <Compass className="h-3 w-3 text-rose-455" />
+                                          <Compass className="h-3 w-3 text-rose-500" />
                                           <span>
                                             GPS Gagal (Tetap Ambil Foto)
                                           </span>
@@ -1140,7 +1132,7 @@ function WargaRoute() {
                                         className="w-14 h-14 rounded-full bg-white border-4 border-slate-300 hover:border-primary flex items-center justify-center cursor-pointer transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                                         title="Ambil Foto"
                                       >
-                                        <div className="w-10 h-10 rounded-full bg-red-650 hover:bg-red-500 transition-colors" />
+                                        <div className="w-10 h-10 rounded-full bg-red-600 hover:bg-red-500 transition-colors" />
                                       </button>
                                     </div>
                                   </div>
@@ -1188,7 +1180,7 @@ function WargaRoute() {
                               <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
                                 Metadata Keamanan Aksi
                               </h5>
-                              <div className="flex flex-col gap-1 mt-1.5 text-xs text-slate-655 font-medium">
+                              <div className="flex flex-col gap-1 mt-1.5 text-xs sm:text-sm text-slate-600 font-medium">
                                 {latitude !== null && longitude !== null ? (
                                   <p className="flex items-center gap-1.5">
                                     <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -1228,7 +1220,7 @@ function WargaRoute() {
                               <button
                                 type="button"
                                 onClick={handleRetake}
-                                className="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                                className="text-xs sm:text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                               >
                                 <RotateCw className="h-3.5 w-3.5" />
                                 Foto Ulang
@@ -1253,7 +1245,7 @@ function WargaRoute() {
 
                     <Button
                       type="submit"
-                      className="w-full h-11 rounded-2xl"
+                      className="w-full h-11 rounded-2xl text-sm sm:text-base font-semibold"
                       disabled={loading}
                     >
                       {loading
@@ -1264,17 +1256,16 @@ function WargaRoute() {
                 )}
               </form>
             </section>
-
             {gpsTasks.length > 0 && (
-              <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-6 shadow-sm space-y-4">
+              <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white/95 p-5 sm:p-6 shadow-sm space-y-4">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.3em] font-bold text-primary">
+                  <p className="text-xs uppercase tracking-wider font-bold text-primary">
                     Jejak Kontribusi
                   </p>
                   <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">
                     Peta Jaring Pengaman Anda
                   </h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs sm:text-sm text-slate-500">
                     Lihat sebaran aksi keselamatan yang telah Anda lakukan di
                     sekitar komunitas.
                   </p>
@@ -1299,7 +1290,7 @@ function WargaRoute() {
                   />
                 </div>
 
-                <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 px-1">
+                <div className="flex items-center gap-4 text-xs sm:text-sm font-semibold text-slate-500 px-1">
                   <span className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     <strong>
@@ -1318,9 +1309,9 @@ function WargaRoute() {
               </section>
             )}
 
-            <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white/95 p-5 sm:p-8 shadow-sm">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold">Riwayat Tugas Relawan</h2>
+                <h2 className="text-xl font-semibold text-slate-900">Riwayat Tugas Relawan</h2>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">
                   Status Laporan
                 </p>
@@ -1328,9 +1319,9 @@ function WargaRoute() {
 
               <div className="mt-6 space-y-4">
                 {initialHistory.length === 0 ? (
-                  <div className="text-center py-12 border border-dashed border-slate-200 rounded-3xl">
+                  <div className="text-center py-12 border border-dashed border-slate-200 rounded-2xl">
                     <div className="flex justify-center mb-3">
-                      <ImageIcon className="h-10 w-10 text-slate-355" />
+                      <ImageIcon className="h-10 w-10 text-slate-400" />
                     </div>
                     <p className="text-sm text-slate-500 font-medium">
                       Belum ada riwayat tugas.
@@ -1343,77 +1334,82 @@ function WargaRoute() {
                   initialHistory.map((task) => (
                     <article
                       key={task.id}
-                      className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 shadow-sm"
+                      className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 sm:p-5 shadow-sm"
                     >
-                      <div className="flex items-center gap-4">
-                        {task.photoUrl ? (
-                          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200 shadow-inner">
-                            <img
-                              src={task.photoUrl}
-                              alt="Bukti Foto"
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-16 w-16 shrink-0 flex items-center justify-center rounded-xl bg-slate-100 border border-slate-200">
-                            <ImageIcon className="h-6 w-6 text-slate-400" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {task.category}
-                          </p>
-                          <div className="mt-1 inline-flex max-w-full items-center rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-                            🎁 Benefit:{' '}
-                            {task.rewardType || 'Menunggu program CSR'}
-                            {task.rewardValue
-                              ? ` (${task.rewardType?.toLowerCase().includes('poin') || task.rewardType?.toLowerCase().includes('credit') ? '' : 'Rp '}${task.rewardValue.toLocaleString('id-ID')}${task.rewardType?.toLowerCase().includes('poin') || task.rewardType?.toLowerCase().includes('credit') ? ' Poin' : ''})`
-                              : ''}
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-1">
-                            Didanai langsung oleh{' '}
-                            {task.companyName || 'program CSR'} via Program CSR
-                          </p>
-                          {task.location && (
-                            <p className="text-xs text-slate-600 font-medium mt-0.5">
-                              Lokasi: {task.location}
-                            </p>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start justify-between">
+                        <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                          {task.photoUrl ? (
+                            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white border border-slate-200 shadow-inner">
+                              <img
+                                src={task.photoUrl}
+                                alt="Bukti Foto"
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-16 w-16 shrink-0 flex items-center justify-center rounded-xl bg-slate-100 border border-slate-200">
+                              <ImageIcon className="h-6 w-6 text-slate-400" />
+                            </div>
                           )}
-                          {task.latitude !== undefined &&
-                            task.longitude !== undefined && (
-                              <p className="text-[11px] text-slate-550 flex items-center gap-1 mt-0.5 font-medium">
-                                <MapPin className="h-3 w-3 text-primary inline" />
-                                <span>
-                                  Koordinat:{' '}
-                                  <a
-                                    href={`https://www.google.com/maps?q=${task.latitude},${task.longitude}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline font-semibold"
-                                  >
-                                    {task.latitude.toFixed(5)},{' '}
-                                    {task.longitude.toFixed(5)}
-                                  </a>
-                                </span>
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <p className="text-sm font-bold text-slate-900 leading-normal">
+                              {task.category}
+                            </p>
+                            <div className="inline-flex max-w-full items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+                              🎁 Benefit:{' '}
+                              {task.rewardType || 'Menunggu program CSR'}
+                              {task.rewardValue
+                                ? ` (${task.rewardType?.toLowerCase().includes('poin') || task.rewardType?.toLowerCase().includes('credit') ? '' : 'Rp '}${task.rewardValue.toLocaleString('id-ID')}${task.rewardType?.toLowerCase().includes('poin') || task.rewardType?.toLowerCase().includes('credit') ? ' Poin' : ''})`
+                                : ''}
+                            </div>
+                            <p className="text-xs text-slate-500 leading-normal">
+                              Didanai langsung oleh{' '}
+                              <span className="font-semibold text-slate-700">
+                                {task.companyName || 'program CSR'}
+                              </span>
+                            </p>
+                            {task.location && (
+                              <p className="text-xs text-slate-600 font-medium">
+                                Lokasi: {task.location}
                               </p>
                             )}
-                          {task.description && (
-                            <p className="text-xs text-slate-500 mt-0.5 italic">
-                              "{task.description}"
-                            </p>
-                          )}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-2.5 pt-1.5 border-t border-slate-200/40">
-                            <span className="text-[10px] text-slate-400">
-                              Dilaporkan: {task.createdAt}
-                            </span>
-                            {task.capturedAt && (
-                              <span className="text-[9px] text-slate-550 bg-slate-100 px-2 py-0.5 rounded-full font-medium inline-block w-fit">
-                                Waktu Foto: {task.capturedAt}
-                              </span>
+                            {task.latitude !== undefined &&
+                              task.longitude !== undefined && (
+                                <p className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
+                                  <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  <span className="truncate">
+                                    Koordinat:{' '}
+                                    <a
+                                      href={`https://www.google.com/maps?q=${task.latitude},${task.longitude}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-primary hover:underline font-semibold"
+                                    >
+                                      {task.latitude.toFixed(5)},{' '}
+                                      {task.longitude.toFixed(5)}
+                                    </a>
+                                  </span>
+                                </p>
+                              )}
+                            {task.description && (
+                              <p className="text-xs text-slate-500 italic mt-0.5 leading-relaxed bg-white/50 p-2 rounded-xl border border-slate-100">
+                                "{task.description}"
+                              </p>
                             )}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mt-2.5 pt-2 border-t border-slate-250/30">
+                              <span className="text-xs text-slate-400">
+                                Dilaporkan: {task.createdAt}
+                              </span>
+                              {task.capturedAt && (
+                                <span className="text-xs text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full font-medium inline-block w-fit">
+                                  Waktu Foto: {task.capturedAt}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="shrink-0">
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 pt-3 sm:pt-0 border-t border-slate-100 sm:border-0 w-full sm:w-auto shrink-0">
+                          <span className="text-xs text-slate-400 sm:hidden">Status Laporan:</span>
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-semibold ${
                               task.status === 'Approved'
@@ -1434,7 +1430,7 @@ function WargaRoute() {
 
           {/* Sidebar: Active CSR Sponsors */}
           <div className="space-y-6">
-            <section className="rounded-[2rem] border border-slate-200 bg-white/95 p-8 shadow-sm">
+            <section className="rounded-2xl sm:rounded-[2rem] border border-slate-200 bg-white/95 p-5 sm:p-8 shadow-sm">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Gift className="h-5 w-5" />
@@ -1443,12 +1439,12 @@ function WargaRoute() {
                   <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                     Sponsor CSR Aktif
                   </h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-405 mt-0.5">
                     Pendanaan aksi warga terbuka
                   </p>
                 </div>
               </div>
-              <p className="mt-4 text-xs text-slate-500 leading-relaxed">
+              <p className="mt-4 text-sm text-slate-500 leading-relaxed">
                 Perusahaan-perusahaan berikut sedang mendanai aksi sosial warga.
                 Pastikan aksimu sesuai dengan kategori fokus mereka!
               </p>
@@ -1456,7 +1452,7 @@ function WargaRoute() {
               <div className="mt-6 space-y-4">
                 {activePrograms.length === 0 ? (
                   <div className="text-center py-8 border border-dashed border-slate-200 rounded-2xl">
-                    <p className="text-xs text-slate-400 font-medium">
+                    <p className="text-xs sm:text-sm text-slate-400 font-medium">
                       Belum ada sponsor CSR aktif.
                     </p>
                   </div>
@@ -1516,10 +1512,10 @@ function WargaRoute() {
                       statusStyle = 'text-slate-500 bg-slate-100'
                     } else if (!hasQuota) {
                       statusText = 'Kuota Habis'
-                      statusStyle = 'text-red-600 bg-red-50'
+                      statusStyle = 'text-red-600 bg-red-550'
                     } else if (isBeforeStart) {
                       statusText = 'Pendaftaran'
-                      statusStyle = 'text-blue-600 bg-blue-50'
+                      statusStyle = 'text-blue-600 bg-blue-550'
                     } else if (isOngoing && startDateObj) {
                       statusText = 'Hari-H'
                       statusStyle = 'text-amber-600 bg-amber-50'
@@ -1528,31 +1524,31 @@ function WargaRoute() {
                     return (
                       <div
                         key={program.id}
-                        className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 hover:bg-slate-50 transition-colors flex flex-col gap-2.5"
+                        className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 hover:bg-slate-50 transition-colors flex flex-col gap-3"
                       >
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-slate-900">
                             {program.company_name}
                           </span>
-                          <div className="flex flex-col gap-1 mt-1">
+                          <div className="flex flex-col gap-1.5 mt-2">
                             {program.focus_category && (
-                              <span className="text-[10px] text-primary font-bold inline-flex items-center gap-1">
+                              <span className="text-xs text-primary font-bold inline-flex items-center gap-1.5">
                                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                                 Fokus: {program.focus_category}
                               </span>
                             )}
-                            <span className="text-[10px] text-slate-500 font-medium">
-                              📅 {periodStr}
+                            <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                              <span>📅</span> {periodStr}
                             </span>
-                            <span className="text-[11px] text-amber-600 font-bold inline-flex items-center gap-1 mt-0.5">
-                              🎁 +
+                            <span className="text-xs text-amber-650 font-bold inline-flex items-center gap-1">
+                              <span>🎁</span> +
                               {Number(program.reward_value || 0).toLocaleString(
                                 'id-ID',
                               )}{' '}
                               Poin
                             </span>
-                            <span className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                              🎟️ Kuota: {remaining} / {total} slot
+                            <span className="text-xs text-slate-500 font-semibold flex items-center gap-1">
+                              <span>🎟️</span> Kuota: {remaining} / {total} slot
                             </span>
                           </div>
                         </div>
@@ -1566,16 +1562,16 @@ function WargaRoute() {
                         </div>
 
                         {isRegistered ? (
-                          <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold py-1.5 mt-1">
+                          <div className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold py-1.5 mt-1">
                             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                             <span>Anda Sudah Terdaftar</span>
                           </div>
                         ) : isAfterEnd ? (
-                          <div className="text-center rounded-xl bg-slate-100 text-slate-500 text-[11px] font-semibold py-1.5 mt-1">
+                          <div className="text-center rounded-xl bg-slate-100 text-slate-500 text-xs font-semibold py-1.5 mt-1">
                             Periode Program Berakhir
                           </div>
                         ) : !hasQuota ? (
-                          <div className="text-center rounded-xl bg-red-50 text-red-700 text-[11px] font-semibold py-1.5 mt-1 border border-red-100">
+                          <div className="text-center rounded-xl bg-red-50 text-red-750 text-xs font-semibold py-1.5 mt-1 border border-red-100">
                             Kuota Pendanaan Habis
                           </div>
                         ) : (
@@ -1584,7 +1580,7 @@ function WargaRoute() {
                             onClick={() => handleRegisterProgram(program.id)}
                             disabled={registeringId === program.id}
                             type="button"
-                            className="w-full mt-1 rounded-xl bg-primary text-xs font-semibold py-1.5 cursor-pointer text-white"
+                            className="w-full mt-1 rounded-xl bg-primary text-xs sm:text-sm font-semibold py-2 cursor-pointer text-white"
                           >
                             {registeringId === program.id
                               ? 'Mendaftar...'
@@ -1604,7 +1600,7 @@ function WargaRoute() {
       {/* Rewards Store Modal */}
       {isRewardOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl bg-white p-8 shadow-xl border border-slate-150 flex flex-col max-h-[85vh]">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl bg-white p-5 sm:p-8 shadow-xl border border-slate-200 flex flex-col max-h-[90vh]">
             <button
               onClick={() => setIsRewardOpen(false)}
               className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-full hover:bg-slate-100 transition-colors"
@@ -1612,15 +1608,15 @@ function WargaRoute() {
               <X className="h-5 w-5" />
             </button>
 
-            <h2 className="text-2xl font-bold tracking-tight text-slate-950 flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-955 flex items-center gap-2">
               <Gift className="h-6 w-6 text-primary" />
               Tukar Safety Net
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-xs sm:text-sm text-slate-500">
               Gunakan saldo Safety Net hasil kerja sosial Anda untuk menukarkan
               opsi di bawah.
             </p>
-            <div className="mt-2 text-xs font-medium text-slate-700">
+            <div className="mt-2 text-xs sm:text-sm font-semibold text-slate-700">
               Saldo Safety Net Saat Ini:{' '}
               <span className="text-primary font-bold">
                 {points.toLocaleString('id-ID')} Safety Net
@@ -1631,9 +1627,9 @@ function WargaRoute() {
               <div className="mt-6 p-6 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm flex flex-col items-center text-center gap-3">
                 <CheckCircle2 className="h-10 w-10 text-emerald-600" />
                 <p className="font-semibold text-base">Penukaran Berhasil!</p>
-                <p className="text-xs leading-relaxed">{successClaim}</p>
+                <p className="text-xs sm:text-sm leading-relaxed">{successClaim}</p>
                 {voucherCode && (
-                  <div className="rounded-xl bg-white/80 px-4 py-3 text-left text-xs font-medium text-emerald-900 ring-1 ring-inset ring-emerald-200">
+                  <div className="rounded-xl bg-white/80 px-4 py-3 text-left text-xs sm:text-sm font-semibold text-emerald-900 ring-1 ring-inset ring-emerald-200">
                     Kode Voucher:{' '}
                     <span className="font-bold tracking-wider">
                       {voucherCode}
@@ -1642,7 +1638,7 @@ function WargaRoute() {
                 )}
                 <button
                   onClick={() => setSuccessClaim(null)}
-                  className="mt-2 text-xs font-semibold px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition cursor-pointer"
+                  className="mt-2 text-xs sm:text-sm font-semibold px-4 py-2 bg-emerald-650 text-white rounded-xl hover:bg-emerald-700 transition cursor-pointer"
                 >
                   Tukar Lagi
                 </button>
@@ -1654,19 +1650,19 @@ function WargaRoute() {
                     key={reward.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition gap-4"
                   >
-                    <div>
+                    <div className="space-y-1">
                       <h4 className="text-sm font-bold text-slate-900">
                         {reward.name}
                       </h4>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-400">
                         {reward.provider}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1 leading-5">
+                      <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                         {reward.description}
                       </p>
                     </div>
-                    <div className="flex items-center gap-4 justify-between sm:justify-end">
-                      <span className="text-sm font-semibold text-primary">
+                    <div className="flex items-center gap-4 justify-between sm:justify-end shrink-0 border-t border-slate-100 sm:border-0 pt-2.5 sm:pt-0">
+                      <span className="text-xs sm:text-sm font-bold text-primary">
                         {reward.cost.toLocaleString('id-ID')} Safety Net
                       </span>
                       <button
@@ -1678,7 +1674,7 @@ function WargaRoute() {
                           )
                         }
                         disabled={points < reward.cost}
-                        className={`text-xs font-semibold py-2 px-4 rounded-xl transition cursor-pointer ${
+                        className={`text-xs sm:text-sm font-semibold py-2 px-4 rounded-xl transition cursor-pointer ${
                           points >= reward.cost
                             ? 'bg-primary text-white hover:opacity-90'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
