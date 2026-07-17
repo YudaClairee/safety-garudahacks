@@ -398,7 +398,7 @@ function Home() {
                 className="w-full md:w-80 h-48 rounded-xl bg-cover bg-center border border-slate-200 dark:border-slate-850 shadow-inner"
                 style={{
                   backgroundImage:
-                    'url(https://picsum.photos/seed/report/400/300)',
+                    'url(https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSg8sXk6dPPuloHv7hXu2M2thUd-oqvks4ZEsAToPvBYA&s=10)',
                 }}
               />
             </div>
@@ -410,19 +410,18 @@ function Home() {
                   Langkah 02
                 </span>
                 <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-2 tracking-tight">
-                  Validasi & Otomasi Webhook
+                  Verifikasi Manual & Transparan
                 </h3>
                 <p className="text-slate-600 dark:text-slate-350 mt-4 text-sm leading-relaxed">
-                  Sistem melakukan pemrosesan otomatis terhadap data laporan.
-                  Status laporan diverifikasi untuk mendeteksi koordinat foto
-                  dan keaslian aktivitas.
+                  Perusahaan sponsor meninjau dan memverifikasi langsung laporan tugas warga, 
+                  memastikan keabsahan bukti foto dan kesesuaian titik lokasi GPS secara akurat.
                 </p>
               </div>
               <div
                 className="w-full md:w-80 h-48 rounded-xl bg-cover bg-center border border-slate-200 dark:border-slate-850 shadow-inner"
                 style={{
                   backgroundImage:
-                    'url(https://picsum.photos/seed/validate/400/300)',
+                    'url(https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXy1NgJkMHsTs77-Be0B41PgHuyMXYwoM52pi278g06g&s=10)',
                 }}
               />
             </div>
@@ -446,7 +445,7 @@ function Home() {
                 className="w-full md:w-80 h-48 rounded-xl bg-cover bg-center border border-slate-200 dark:border-slate-850 shadow-inner"
                 style={{
                   backgroundImage:
-                    'url(https://picsum.photos/seed/disburse/400/300)',
+                    'url(https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQWsGc7LSSZXKldbRs1is8xl9G3A4xzq5rlj9WPwdGfQ&s=10)',
                 }}
               />
             </div>

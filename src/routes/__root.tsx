@@ -15,10 +15,14 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Jalan (Jaringan Relawan)',
       },
     ],
     links: [
+      {
+        rel: 'icon',
+        href: '/logojalan-transparant.png',
+      },
       {
         rel: 'stylesheet',
         href: appCss,
