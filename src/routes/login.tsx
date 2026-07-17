@@ -35,14 +35,14 @@ function LoginPage() {
         }
 
         if (signUpData.user) {
-          // Update the public.users table with the selected role and name immediately after signup
+          // Update the public.users table with the selected role immediately after signup
           const { error: updateError } = await supabase
             .from('users')
-            .update({ role, full_name: fullName.trim() })
+            .update({ role })
             .eq('id', signUpData.user.id)
           
           if (updateError) {
-            console.error('Failed to set role and name:', updateError)
+            console.error('Failed to set role:', updateError)
           }
         }
       }

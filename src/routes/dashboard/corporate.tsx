@@ -24,7 +24,7 @@ export const Route = createFileRoute('/dashboard/corporate')({
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('full_name')
+      .select('email')
       .eq('id', session.user.id)
       .single()
 
@@ -43,10 +43,15 @@ export const Route = createFileRoute('/dashboard/corporate')({
       console.error('Error fetching CSR programs:', programsError)
     if (tasksError) console.error('Error fetching tasks:', tasksError)
 
+    const myCompanyNames = (programsData || []).map((p: any) => p.company_name).filter(Boolean)
+    const filteredTasks = (tasksData || []).filter((task: any) => 
+      task.status === 'pending' || myCompanyNames.includes(task.company_name)
+    )
+
     return {
       programs: (programsData || []) as CSRProgram[],
-      tasks: (tasksData || []) as any[],
-      companyName: userProfile?.full_name || 'Perusahaan CSR',
+      tasks: filteredTasks,
+      companyName: userProfile?.email?.split('@')[0] || 'Perusahaan CSR',
     }
   },
   component: CorporateDashboard,
@@ -271,7 +276,7 @@ function CorporateDashboard() {
 
   const workAreas = Array.from(
     new Set(
-      tasks
+      approvedTasks
         .map(task => categoryToWorkArea[task.type])
         .filter(Boolean),
     ),
@@ -315,7 +320,8 @@ function CorporateDashboard() {
         .replace(/'/g, '&#039;')
 
     const activityRows = approvedTasks.slice(0, 10).map((task) => {
-      const email = escapeHtml(task.users?.email ?? 'Relawan Anonim')
+      const userEmail = Array.isArray(task.users) ? (task.users as any)[0]?.email : (task.users as any)?.email
+      const email = escapeHtml(userEmail ?? 'Relawan Anonim')
       const category = escapeHtml(getTaskCategory(task.type)?.label ?? task.type)
       const createdAt = escapeHtml(new Date(task.created_at).toLocaleDateString('id-ID'))
       const location = escapeHtml(task.location || '-')
@@ -767,7 +773,7 @@ function CorporateDashboard() {
                           )}
                           <div className="flex flex-col gap-1">
                             <span className="font-medium text-slate-900 text-sm sm:text-base">
-                              {task.users?.email || 'Relawan Anonim'}
+                              {(Array.isArray(task.users) ? (task.users as any)[0]?.email : (task.users as any)?.email) || 'Relawan Anonim'}
                             </span>
                             <span className="text-sm text-slate-550 font-medium">
                               {getTaskCategory(task.type)?.label ?? task.type}
