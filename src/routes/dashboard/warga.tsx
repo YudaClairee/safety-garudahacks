@@ -285,9 +285,18 @@ function WargaRoute() {
     }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        alert('Sesi login tidak ditemukan. Silakan login kembali.')
+        return
+      }
+
       const res = await fetch('/api/redeem-reward', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           rewardName,
           rewardType,
@@ -450,7 +459,7 @@ function WargaRoute() {
                   <option value="general">Cocokkan Otomatis (Pooled Funding)</option>
                   {activePrograms.map((prog) => (
                     <option key={prog.id} value={prog.id}>
-                      {prog.company_name} (Fokus: {prog.focus_category} | Lokasi: {prog.location || 'Semua Wilayah'})
+                      {prog.company_name} (Fokus: {prog.focus_category} | Lokasi: {prog.location || 'Semua Wilayah'} | +{Number(prog.reward_value || 0).toLocaleString('id-ID')} Poin)
                     </option>
                   ))}
                 </select>
@@ -697,12 +706,17 @@ function WargaRoute() {
                       <span className="text-sm font-bold text-slate-900">
                         {program.company_name}
                       </span>
-                      {program.focus_category && (
-                        <span className="text-[10px] text-primary font-bold mt-1 inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                          Fokus: {program.focus_category}
+                      <div className="flex flex-col gap-1 mt-1">
+                        {program.focus_category && (
+                          <span className="text-[10px] text-primary font-bold inline-flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            Fokus: {program.focus_category}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-amber-600 font-bold inline-flex items-center gap-1">
+                          🎁 +{Number(program.reward_value || 0).toLocaleString('id-ID')} Poin
                         </span>
-                      )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between text-xs border-t border-slate-100/50 pt-2">
                       <span className="text-slate-400">Status Pendanaan:</span>

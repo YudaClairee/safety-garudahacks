@@ -1,5 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { supabase } from '../../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 export const Route = createFileRoute('/api/redeem-reward')({
   server: {
@@ -19,18 +22,42 @@ export const Route = createFileRoute('/api/redeem-reward')({
             )
           }
 
-          const { data: { session } } = await supabase.auth.getSession()
-          if (!session) {
+          const authHeader = request.headers.get('Authorization')
+          let token = ''
+          if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7)
+          }
+
+          if (!token) {
             return new Response(
-              JSON.stringify({ error: 'Anda belum login' }),
+              JSON.stringify({ error: 'Anda belum login (Token tidak ditemukan)' }),
               { status: 401, headers: { 'Content-Type': 'application/json' } },
             )
           }
 
-          const { data: userData, error: userError } = await supabase
+          const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            },
+            auth: {
+              persistSession: false
+            }
+          })
+
+          const { data: { user }, error: authError } = await userSupabase.auth.getUser(token)
+          if (authError || !user) {
+            return new Response(
+              JSON.stringify({ error: 'Sesi login tidak valid atau kedaluwarsa' }),
+              { status: 401, headers: { 'Content-Type': 'application/json' } },
+            )
+          }
+
+          const { data: userData, error: userError } = await userSupabase
             .from('users')
             .select('points')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single()
 
           if (userError) {
@@ -50,10 +77,10 @@ export const Route = createFileRoute('/api/redeem-reward')({
 
           const voucherCode = `JLN-${Math.random().toString(36).slice(2, 6).toUpperCase()}-${Date.now().toString().slice(-4)}`
 
-          const { error: updateError } = await supabase
+          const { error: updateError } = await userSupabase
             .from('users')
             .update({ points: currentPoints - pointsCost })
-            .eq('id', session.user.id)
+            .eq('id', user.id)
 
           if (updateError) {
             return new Response(
@@ -62,10 +89,10 @@ export const Route = createFileRoute('/api/redeem-reward')({
             )
           }
 
-          const { error: insertError } = await supabase
+          const { error: insertError } = await userSupabase
             .from('reward_redemptions')
             .insert({
-              user_id: session.user.id,
+              user_id: user.id,
               reward_name: rewardName,
               reward_type: rewardType,
               reward_value: rewardValue,
