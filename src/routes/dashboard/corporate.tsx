@@ -12,7 +12,6 @@ import {
   ArrowUpRight,
   LogOut,
   X,
-  Sparkles,
   Trash2,
   MapPin,
   Clock,
@@ -74,7 +73,6 @@ function CorporateDashboard() {
   } = Route.useLoaderData()
   const router = useRouter()
 
-  const [isSimulating, setIsSimulating] = useState(false)
 
   // Map filter states
   const [mapProgramId, setMapProgramId] = useState('all')
@@ -102,29 +100,6 @@ function CorporateDashboard() {
     }
   }
 
-  async function handleTriggerAutomation() {
-    setIsSimulating(true)
-    try {
-      const res = await fetch('/api/trigger-automation', {
-        method: 'POST',
-      })
-      const data = await res.json()
-      if (res.ok) {
-        alert(
-          `Simulasi Webhook sukses! ${data.message || ''}\nJumlah tugas diproses: ${data.processedCount || 0}`,
-        )
-        router.invalidate() // Refetch data
-      } else {
-        alert(`Gagal menjalankan simulasi: ${data.error || 'Unknown error'}`)
-      }
-    } catch (err) {
-      alert(
-        `Terjadi kesalahan: ${err instanceof Error ? err.message : String(err)}`,
-      )
-    } finally {
-      setIsSimulating(false)
-    }
-  }
 
   // Form states
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -706,20 +681,6 @@ function CorporateDashboard() {
                 Pantau alokasi dana dan program relawan yang sedang berjalan.
               </p>
             </div>
-            <button
-              onClick={handleTriggerAutomation}
-              disabled={isSimulating}
-              className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-3 text-sm font-semibold text-white shadow-md hover:bg-amber-600 transition-colors disabled:opacity-50 cursor-pointer w-fit"
-            >
-              {isSimulating ? (
-                <span>Memproses Simulasi...</span>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  <span>Simulasi Webhook Otomasi</span>
-                </>
-              )}
-            </button>
           </motion.div>
 
           {/* Metrics Grid */}

@@ -41,9 +41,6 @@ Aplikasi ini menyederhanakan penyaluran bantuan sosial/insentif bagi relawan (_S
   - _Heatmap Visual:_ Peta intensitas aksi untuk menganalisis kepadatan kontribusi sosial di wilayah tertentu.
   - _Filtering Lanjutan:_ Filter visualisasi peta berdasarkan Program, Kategori Tugas, dan Status Verifikasi.
 
-### ⚙️ 3. Simulasi Automasi & Webhook
-
-- **Webhook `/api/trigger-automation`:** Endpoint khusus yang mensimulasikan pemrosesan n8n/Make.com untuk mengevaluasi tugas berstatus `pending`. Algoritma pencocokan akan mencari program CSR yang relevan, memotong anggaran program sebesar nilai reward ditambah **12% Platform Fee**, memperbarui saldo poin warga, dan mengubah status tugas menjadi `approved`.
 
 ---
 
@@ -206,10 +203,10 @@ Ikuti langkah-langkah di bawah ini untuk mensimulasikan fungsionalitas platform 
     - Jika program belum dimulai/belum didaftari, klik tombol **"Daftar Aksi Sekarang"**.
     - Setelah berhasil terdaftar dan berada di hari pelaksanaan, form pelaporan akan terbuka.
     - Gunakan kamera aktif (atau upload file cadangan) untuk mengambil foto tugas, ketik lokasi spesifik dan deskripsi tugas, lalu klik **Kirim Laporan**. Status tugas baru Anda akan menjadi **Pending**.
-4.  **Menjalankan Automasi / Webhook:**
-    - Untuk memproses tugas tertunda tersebut secara instan, Anda bisa kembali ke **Dashboard Corporate** lalu klik tombol **"Simulasi Webhook Otomasi"**.
-    - Secara alternatif, Anda dapat mengirimkan permintaan HTTP POST/GET langsung ke endpoint `/api/trigger-automation`.
-    - Periksa data: status tugas warga akan berubah menjadi **Approved**, anggaran program corporate terpotong, dan saldo warga bertambah sebesar 50.000 poin.
+4.  **Verifikasi Tugas oleh Corporate:**
+    - Masuk kembali dengan akun corporate.
+    - Di bagian **Log Aktivitas Relawan (Warga)**, cari laporan tugas warga berstatus pending.
+    - Klik tombol **Setuju** untuk menyetujui tugas warga (anggaran program terpotong dan warga mendapat poin) atau klik **Tolak** jika tidak valid.
 5.  **Penukaran Voucher:**
     - Kembali ke **Dashboard Warga**, klik **Tukar Safety Net**.
     - Pilih opsi penukaran voucher (misal: "Voucher Paket Sembako" seharga 12.000 poin).
@@ -222,4 +219,4 @@ Ikuti langkah-langkah di bawah ini untuk mensimulasikan fungsionalitas platform 
 
 ## 🔒 Row Level Security (RLS) & Produksi
 
-Sebagai catatan proyek ini disiapkan untuk demonstrasi Hackathon MVP, sehingga beberapa kebijakan RLS sengaja diatur agar dapat diubah demi kelancaran proses simulasi webhook tanpa memerlukan service role key yang kompleks di sisi klien. Untuk peluncuran ke tahap produksi, sangat direkomendasikan untuk memperketat kebijakan RLS pada tabel `public.tasks` dan `public.csr_programs` serta mengisolasi pemanggilan database server-side menggunakan Service Role API Key rahasia di dalam Server Functions TanStack Start.
+Sebagai catatan proyek ini disiapkan untuk demonstrasi Hackathon MVP, sehingga beberapa kebijakan RLS sengaja diatur agar lebih longgar demi kemudahan integrasi database langsung di sisi klien. Untuk peluncuran ke tahap produksi, sangat direkomendasikan untuk memperketat kebijakan RLS pada tabel `public.tasks` dan `public.csr_programs` serta mengisolasi pemanggilan database server-side menggunakan Service Role API Key rahasia di dalam Server Functions TanStack Start.
