@@ -230,6 +230,198 @@ function CorporateDashboard() {
     }).format(amount)
   }
 
+  const mitigationCategories = [
+    'Membersihkan lingkungan',
+    'Menanam pohon',
+    'Mengelola sampah',
+    'Mengajar anak-anak',
+  ]
+
+  const approvedTasks = tasks.filter(task => task.status === 'approved')
+  const totalVolunteersHelped = new Set(approvedTasks.map(task => task.user_id)).size
+  const mitigationSuccessCount = approvedTasks.filter(task =>
+    mitigationCategories.includes(task.type),
+  ).length
+  const estimatedHouseholdImpact = totalVolunteersHelped * 1.8
+
+  const categoryToWorkArea: Record<string, string> = {
+    'Membersihkan lingkungan': 'Lingkungan',
+    'Menanam pohon': 'Lingkungan',
+    'Mengelola sampah': 'Lingkungan',
+    'Mengajar anak-anak': 'Sosial',
+    'Mendukung UMKM': 'Sosial',
+    'Pelatihan keterampilan': 'Sosial',
+    'Mengawal anggaran publik': 'Tata Kelola',
+    'Kampanye literasi hukum': 'Tata Kelola',
+    'Pendampingan layanan': 'Sosial',
+  }
+
+  const workAreas = Array.from(
+    new Set(
+      tasks
+        .map(task => categoryToWorkArea[task.type] || 'Lingkungan')
+        .filter(Boolean),
+    ),
+  )
+
+  const esgMetrics = [
+    {
+      label: 'Total Warga Terbantu',
+      value: totalVolunteersHelped.toLocaleString('id-ID'),
+      description: 'Jumlah relawan yang berhasil mendapatkan dukungan dari program CSR.',
+    },
+    {
+      label: 'Aksi Mitigasi Berhasil',
+      value: mitigationSuccessCount.toString(),
+      description: 'Total tugas mitigasi lingkungan yang sudah disetujui dan terealisasi.',
+    },
+    {
+      label: 'Estimasi Dampak Rumah Tangga',
+      value: estimatedHouseholdImpact.toFixed(0),
+      description: 'Perkiraan jumlah rumah tangga yang terimbas positif dari program ini.',
+    },
+    {
+      label: 'Skor ESG',
+      value: String(
+        Math.min(
+          100,
+          70 + Math.round((mitigationSuccessCount / Math.max(1, approvedTasks.length)) * 15) + Math.min(15, totalVolunteersHelped),
+        ),
+      ),
+      description: 'Indeks ringkas performa lingkungan, sosial, dan tata kelola dari program CSR Anda.',
+    },
+  ]
+
+  const handleExportEsgReport = () => {
+    const escapeHtml = (value: string | number | boolean | null | undefined) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+
+    const activityRows = approvedTasks.slice(0, 10).map((task) => {
+      const email = escapeHtml(task.users?.email ?? 'Relawan Anonim')
+      const category = escapeHtml(getTaskCategory(task.type)?.label ?? task.type)
+      const createdAt = escapeHtml(new Date(task.created_at).toLocaleDateString('id-ID'))
+      const location = escapeHtml(task.location || '-')
+      const status = escapeHtml(task.status)
+      return `
+        <tr>
+          <td>${email}</td>
+          <td>${category}</td>
+          <td>${location}</td>
+          <td>${status}</td>
+          <td>${createdAt}</td>
+        </tr>
+      `
+    }).join('')
+
+    const workAreaBadges = workAreas.map((area) => `<span class="badge">${escapeHtml(area)}</span>`).join('')
+
+    const reportHtml = `
+      <html>
+        <head>
+          <title>Laporan ESG Jalan Corporate</title>
+          <style>
+            body { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; color: #0f172a; }
+            .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+            .brand img { width: 48px; height: auto; }
+            .brand h1 { font-size: 28px; margin: 0; }
+            h2 { margin-top: 28px; margin-bottom: 12px; font-size: 18px; }
+            p, li { font-size: 12px; line-height: 1.6; margin: 0; }
+            .section { margin-bottom: 24px; }
+            .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+            .metric-card { border: 1px solid #cbd5e1; border-radius: 18px; padding: 16px; background: #ffffff; }
+            .metric-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #0f172a; letter-spacing: 0.06em; }
+            .metric-value { margin-top: 10px; font-size: 22px; font-weight: 700; color: #0c4a6e; }
+            .metric-desc { margin-top: 8px; color: #475569; font-size: 11px; }
+            .badge { display: inline-block; margin: 0 8px 8px 0; padding: 6px 10px; border-radius: 9999px; background: #bae6fd; color: #0c4a6e; font-size: 11px; }
+            .summary-list { margin-top: 12px; list-style: none; padding: 0; }
+            .summary-list li { margin-bottom: 8px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+            th, td { padding: 10px 8px; border: 1px solid #e2e8f0; text-align: left; font-size: 11px; }
+            th { background: #f8fafc; }
+            .footer { margin-top: 32px; font-size: 11px; color: #64748b; }
+            @media print { body { margin: 24px; } .page-break { page-break-before: always; } }
+          </style>
+        </head>
+        <body>
+          <div class="brand">
+            <img src="https://via.placeholder.com/48x48.png?text=J" alt="Jalan Logo" />
+            <div>
+              <h1>Laporan ESG Jalan Corporate</h1>
+              <p style="margin-top: 8px; color: #475569; font-size: 12px;">Ringkasan metrik keberlanjutan, log aktivitas, dan branding perusahaan.</p>
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>Ringkasan Utama</h2>
+            <ul class="summary-list">
+              <li><strong>Tanggal Laporan:</strong> ${escapeHtml(new Date().toLocaleString('id-ID'))}</li>
+              <li><strong>Total Anggaran CSR:</strong> ${escapeHtml(formatCurrency(totalBudgetAllocated))}</li>
+              <li><strong>Program Aktif:</strong> ${escapeHtml(activeProgramsCount)}</li>
+              <li><strong>Relawan Terlibat:</strong> ${escapeHtml(totalVolunteersHelped)}</li>
+              <li><strong>Estimasi Rumah Tangga Terimbas:</strong> ${escapeHtml(estimatedHouseholdImpact.toFixed(0))}</li>
+            </ul>
+          </div>
+
+          <div class="section">
+            <h2>Metrik ESG</h2>
+            <div class="metric-grid">
+              ${esgMetrics.map(metric => `
+                <div class="metric-card">
+                  <div class="metric-title">${escapeHtml(metric.label)}</div>
+                  <div class="metric-value">${escapeHtml(metric.value)}</div>
+                  <div class="metric-desc">${escapeHtml(metric.description)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="section">
+            <h2>Area Kerja</h2>
+            <div>${workAreaBadges}</div>
+          </div>
+
+          <div class="section page-break">
+            <h2>Log Aktivitas Relawan</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Relawan</th>
+                  <th>Kategori</th>
+                  <th>Lokasi</th>
+                  <th>Status</th>
+                  <th>Tanggal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${activityRows || '<tr><td colspan="5" style="text-align:center; color:#64748b;">Tidak ada aktivitas yang tersedia.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="footer">
+            <p>Jalan Corporate · Laporan ESG generated by the CSR dashboard.</p>
+          </div>
+        </body>
+      </html>
+    `
+
+    const reportWindow = window.open('', '_blank', 'toolbar=no,scrollbars=yes,resizable=yes,width=900,height=900')
+    if (!reportWindow) {
+      alert('Tidak dapat membuka jendela baru untuk mengekspor laporan. Izinkan popup pada browser Anda.')
+      return
+    }
+
+    reportWindow.document.write(reportHtml)
+    reportWindow.document.close()
+    reportWindow.focus()
+    reportWindow.print()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const newErrors: typeof errors = {}
@@ -478,6 +670,50 @@ function CorporateDashboard() {
               </div>
             </motion.div>
           </div>
+
+          <section className="rounded-[2rem] border border-slate-200 bg-sky-50/95 p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-sky-700/80">ESG Impact</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Metrik Keberlanjutan & Area Kerja</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
+                  Ringkasan metrik ESG yang menunjukkan dampak sosial, lingkungan, dan tata kelola dari program CSR Anda.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportEsgReport}
+                className="inline-flex items-center justify-center rounded-full bg-sky-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-800 transition-colors"
+              >
+                Download ESG Report (PDF)
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {esgMetrics.map((metric) => (
+                <div key={metric.label} className="rounded-[1.75rem] border border-sky-200 bg-white p-5 shadow-sm">
+                  <p className="text-sm font-semibold text-slate-900">{metric.label}</p>
+                  <p className="mt-3 text-3xl font-bold tracking-tight text-sky-800">{metric.value}</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{metric.description}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-[1.75rem] border border-sky-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">Area Kerja</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {workAreas.length > 0 ? (
+                  workAreas.map((area) => (
+                    <span key={area} className="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-900">
+                      {area}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-500">Tidak ada area kerja yang teridentifikasi.</span>
+                )}
+              </div>
+            </div>
+          </section>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             {/* Left/Middle Columns: Activity Log */}
