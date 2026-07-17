@@ -7,7 +7,7 @@ Dokumen ini membagi tugas untuk dua fitur baru agar dapat dikerjakan secara para
 **Fokus Utama:** Alur pendaftaran warga untuk program CSR dan pembatasan pengiriman tugas hanya pada hari-H.
 **Area Kerja:** `schema.sql`, `src/routes/dashboard/warga.tsx`, `src/routes/dashboard/corporate.tsx` (Form Pembuatan Program).
 
-- [ ] **Database & Schema:**
+- [x] **Database & Schema:**
   - Tambahkan kolom `start_date` dan `end_date` (atau `event_date`) pada tabel `csr_programs`.
   - Buat tabel baru `program_registrations` untuk melacak warga yang sudah mendaftar pada program tertentu (kolom: `id`, `user_id`, `program_id`, `registered_at`).
 - [ ] **Dashboard Corporate (Form Buat Program):**

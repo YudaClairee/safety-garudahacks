@@ -60,6 +60,8 @@ CREATE TABLE public.csr_programs (
   reward_type TEXT NOT NULL DEFAULT 'Voucher Sembako',
   reward_value NUMERIC NOT NULL DEFAULT 50000,
   reward_points INTEGER NOT NULL DEFAULT 1000,
+  start_date TIMESTAMPTZ,
+  end_date TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -79,6 +81,20 @@ CREATE TABLE public.reward_redemptions (
 ALTER TABLE public.reward_redemptions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Redemptions are viewable by everyone." ON public.reward_redemptions FOR SELECT USING (true);
 CREATE POLICY "Users can insert their own redemptions." ON public.reward_redemptions FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- 3c. Tabel Pendaftaran Program CSR oleh Warga (Baru)
+CREATE TABLE public.program_registrations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) NOT NULL,
+  program_id UUID REFERENCES public.csr_programs(id) ON DELETE CASCADE NOT NULL,
+  registered_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, program_id)
+);
+
+ALTER TABLE public.program_registrations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Registrations are viewable by everyone." ON public.program_registrations FOR SELECT USING (true);
+CREATE POLICY "Users can register themselves." ON public.program_registrations FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can cancel their registration." ON public.program_registrations FOR DELETE USING (auth.uid() = user_id);
 
 -- Mengaktifkan RLS untuk CSR Programs
 ALTER TABLE public.csr_programs ENABLE ROW LEVEL SECURITY;
