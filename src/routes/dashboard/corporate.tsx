@@ -96,11 +96,15 @@ function CorporateDashboard() {
   const [rewardType, setRewardType] = useState('Safety Credits/Poin')
   const [rewardValue, setRewardValue] = useState('50000')
   const [focusCategory, setFocusCategory] = useState(taskCategories[0].value)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [errors, setErrors] = useState<{
     companyName?: string
     budget?: string
     location?: string
     rewardValue?: string
+    startDate?: string
+    endDate?: string
   }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -248,6 +252,16 @@ function CorporateDashboard() {
       newErrors.rewardValue = 'Reward value harus berupa angka lebih besar dari 0'
     }
 
+    if (!startDate) {
+      newErrors.startDate = 'Tanggal mulai wajib diisi'
+    }
+
+    if (!endDate) {
+      newErrors.endDate = 'Tanggal selesai wajib diisi'
+    } else if (startDate && new Date(endDate) < new Date(startDate)) {
+      newErrors.endDate = 'Tanggal selesai tidak boleh sebelum tanggal mulai'
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
@@ -271,6 +285,8 @@ function CorporateDashboard() {
         reward_value: rewardValueNum,
         reward_points: rewardValueNum,
         user_id: session.user.id,
+        start_date: startDate ? new Date(startDate).toISOString() : null,
+        end_date: endDate ? new Date(endDate).toISOString() : null,
       })
 
       if (error) throw error
@@ -281,6 +297,8 @@ function CorporateDashboard() {
       setLocation('')
       setRewardType('Safety Credits/Poin')
       setRewardValue('50000')
+      setStartDate('')
+      setEndDate('')
       setIsFormOpen(false)
 
       // Invalidate routing query to trigger reload
@@ -606,6 +624,11 @@ function CorporateDashboard() {
                                   Lokasi Target: {program.location}
                                 </span>
                               )}
+                              {program.start_date && program.end_date && (
+                                <span className="text-[10px] text-amber-600 font-medium">
+                                  Periode: {new Date(program.start_date).toLocaleDateString('id-ID')} - {new Date(program.end_date).toLocaleDateString('id-ID')}
+                                </span>
+                              )}
                               <span className="text-[10px] text-slate-500 font-medium">
                                 Benefit: {program.reward_type || 'Safety Credits/Poin'} ({program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? '' : 'Rp '}{Number(program.reward_value || 0).toLocaleString('id-ID')}{program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? ' Poin' : ''})
                               </span>
@@ -661,6 +684,8 @@ function CorporateDashboard() {
                   setIsFormOpen(false)
                   setErrors({})
                   setSubmitError('')
+                  setStartDate('')
+                  setEndDate('')
                 }}
                 className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 cursor-pointer p-1 rounded-full hover:bg-slate-100 transition-colors"
               >
@@ -722,10 +747,45 @@ function CorporateDashboard() {
                     className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                   />
                   {errors.location && (
-                    <p className="mt-1 text-xs text-red-600">
+                    <p className="mt-1 text-xs text-red-650">
                       {errors.location}
                     </p>
                   )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Tanggal Mulai
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                    />
+                    {errors.startDate && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {errors.startDate}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Tanggal Selesai
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                    />
+                    {errors.endDate && (
+                      <p className="mt-1 text-xs text-red-600">
+                        {errors.endDate}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div>
