@@ -52,24 +52,41 @@ async function handleAutomation() {
         if (userFetchError) throw new Error(`User fetch failed: ${userFetchError.message}`);
 
         const currentPoints = userData?.points || 0;
-        const newPoints = currentPoints + 1000; // 1,000 Poin Kebaikan flat reward
 
-        // B. Fetch first active program matching the task type and having sufficient budget
-        const { data: programsData, error: programFetchError } = await supabase
+        // B. Fetch all active programs
+        const { data: allPrograms, error: programFetchError } = await supabase
           .from('csr_programs')
           .select('*')
-          .eq('focus_category', task.type)
-          .gte('budget_rupiah', 250000)
-          .order('created_at', { ascending: true })
-          .limit(1);
+          .order('created_at', { ascending: true });
 
-        if (programFetchError || !programsData || programsData.length === 0) {
-          throw new Error(`No active CSR program available to fund "${task.type}" (Needs min Rp 250.000).`);
+        if (programFetchError || !allPrograms || allPrograms.length === 0) {
+          throw new Error(`No active CSR programs found.`);
         }
 
-        const targetProgram = programsData[0];
-        const newBudget = Number(targetProgram.budget_rupiah) - 250000; // Rp 250.000 deduction
+        // Find a program that matches task type and has enough budget (budget >= reward_value * 1.12)
+        let targetProgram = allPrograms.find(
+          (p) => p.focus_category === task.type && Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12
+        );
+
+        if (!targetProgram) {
+          // Fallback to any program with enough budget
+          targetProgram = allPrograms.find(
+            (p) => Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12
+          );
+        }
+
+        if (!targetProgram) {
+          throw new Error(`No active CSR program available to fund "${task.type}" with sufficient budget (Needs reward_value + 12% Platform Fee).`);
+        }
+
+        const costPerTask = Math.round(Number(targetProgram.reward_value) * 1.12);
+        const newBudget = Number(targetProgram.budget_rupiah) - costPerTask;
         const newTasksFunded = (targetProgram.tasks_funded || 0) + 1;
+        const pointsAwarded = Number(targetProgram.reward_value || 0);
+        if (pointsAwarded <= 0) {
+          throw new Error(`CSR program "${targetProgram.company_name}" is missing a valid reward_value.`);
+        }
+        const newPoints = currentPoints + pointsAwarded;
 
         if (newBudget < 0) {
           throw new Error(`Insufficient budget in program: ${targetProgram.company_name}`);
@@ -109,9 +126,9 @@ async function handleAutomation() {
           taskId: task.id,
           citizenId: task.user_id,
           taskType: task.type,
-          pointsAwarded: 1000,
+          pointsAwarded,
           fundedBy: targetProgram.company_name,
-          deductedAmount: 250000
+          deductedAmount: costPerTask
         });
       } catch (err: any) {
         console.error(`Error processing task ${task.id}:`, err);

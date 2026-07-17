@@ -2,7 +2,6 @@ import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { CSRProgram } from '../../lib/types'
-import { csrRewardOptions } from '../../lib/csr-reward-options'
 import { getTaskCategory, taskCategories } from '../../lib/task-categories'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -94,7 +93,7 @@ function CorporateDashboard() {
   const [companyName, setCompanyName] = useState('')
   const [budget, setBudget] = useState('')
   const [location, setLocation] = useState('')
-  const [rewardType, setRewardType] = useState(csrRewardOptions[0].value)
+  const [rewardType, setRewardType] = useState('Safety Credits/Poin')
   const [rewardValue, setRewardValue] = useState('50000')
   const [focusCategory, setFocusCategory] = useState(taskCategories[0].value)
   const [errors, setErrors] = useState<{
@@ -136,41 +135,37 @@ function CorporateDashboard() {
       if (!session) throw new Error('Sesi login tidak valid')
 
       // Find programs that belong to the current company user
-      const { data: programsData, error: programFetchError } = await supabase
+      const { data: allPrograms, error: programFetchError } = await supabase
         .from('csr_programs')
         .select('*')
         .eq('user_id', session.user.id)
-        .eq('focus_category', task.type)
-        .gte('budget_rupiah', 250000)
         .order('created_at', { ascending: true })
-        .limit(1)
 
-      let targetProgram: any = null
+      if (programFetchError) throw new Error(`Gagal mengambil program CSR: ${programFetchError.message}`)
 
-      if (programFetchError || !programsData || programsData.length === 0) {
+      // Find matching program with enough budget (budget >= reward_value * 1.12)
+      let targetProgram = allPrograms?.find(
+        (p) => p.focus_category === task.type && Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12
+      )
+
+      if (!targetProgram) {
         // Fallback: search for any program of this company with enough budget
-        const { data: fallbackPrograms } = await supabase
-          .from('csr_programs')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .gte('budget_rupiah', 250000)
-          .order('created_at', { ascending: true })
-          .limit(1)
-
-        if (!fallbackPrograms || fallbackPrograms.length === 0) {
-          throw new Error('Anda tidak memiliki program CSR aktif dengan sisa anggaran mencukupi (Min Rp 250.000) untuk mendanai tugas ini.')
-        }
-        targetProgram = fallbackPrograms[0]
-      } else {
-        targetProgram = programsData[0]
+        targetProgram = allPrograms?.find(
+          (p) => Number(p.budget_rupiah) >= Number(p.reward_value) * 1.12
+        )
       }
 
-      const newBudget = Number(targetProgram.budget_rupiah) - 250000
+      if (!targetProgram) {
+        throw new Error('Anda tidak memiliki program CSR aktif dengan sisa anggaran mencukupi untuk mendanai tugas ini (Dibutuhkan: Nilai Reward + 12% Platform Fee).')
+      }
+
+      const costPerTask = Math.round(Number(targetProgram.reward_value) * 1.12)
+      const newBudget = Number(targetProgram.budget_rupiah) - costPerTask
       const newTasksFunded = (targetProgram.tasks_funded || 0) + 1
-      const rewardPointsAwarded =
-        targetProgram.reward_type === 'Safety Credits/Poin'
-          ? Number(targetProgram.reward_value) || Number(targetProgram.reward_points) || 1000
-          : Number(targetProgram.reward_points) || 1000
+      const rewardPointsAwarded = Number(targetProgram.reward_value || 0)
+      if (rewardPointsAwarded <= 0) {
+        throw new Error('Program CSR belum memiliki reward_value yang valid.')
+      }
       const newPoints = (userData?.points || 0) + rewardPointsAwarded
 
       // 3. Update Database (User Points, CSR Program, and Task Status)
@@ -274,7 +269,7 @@ function CorporateDashboard() {
         location: location.trim(),
         reward_type: rewardType,
         reward_value: rewardValueNum,
-        reward_points: rewardType === 'Safety Credits/Poin' ? rewardValueNum : 1000,
+        reward_points: rewardValueNum,
         user_id: session.user.id,
       })
 
@@ -284,7 +279,7 @@ function CorporateDashboard() {
       setCompanyName('')
       setBudget('')
       setLocation('')
-      setRewardType(csrRewardOptions[0].value)
+      setRewardType('Safety Credits/Poin')
       setRewardValue('50000')
       setIsFormOpen(false)
 
@@ -612,7 +607,7 @@ function CorporateDashboard() {
                                 </span>
                               )}
                               <span className="text-[10px] text-slate-500 font-medium">
-                                Benefit: {program.reward_type || 'Voucher Paket Sembako'} (Rp {Number(program.reward_value || 0).toLocaleString('id-ID')})
+                                Benefit: {program.reward_type || 'Safety Credits/Poin'} ({program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? '' : 'Rp '}{Number(program.reward_value || 0).toLocaleString('id-ID')}{program.reward_type?.toLowerCase().includes('poin') || program.reward_type?.toLowerCase().includes('credit') ? ' Poin' : ''})
                               </span>
                             </div>
                           </div>
@@ -630,7 +625,7 @@ function CorporateDashboard() {
                           </div>
                         </div>
                         <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
-                          <span>{program.tasks_funded} Tugas didanai ({program.reward_points || 1000} Safety Credits)</span>
+                          <span>{program.tasks_funded} Tugas didanai ({Number(program.reward_value || program.reward_points || 0).toLocaleString('id-ID')} Safety Credits)</span>
                           <span>
                             {new Date(program.created_at).toLocaleDateString(
                               'id-ID',
@@ -758,22 +753,14 @@ function CorporateDashboard() {
                   <label className="block text-sm font-medium text-slate-700">
                     Tipe Reward
                   </label>
-                  <select
-                    value={rewardType}
-                    onChange={(e) => setRewardType(e.target.value)}
-                    className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                  >
-                    {csrRewardOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
+                    Safety Credits/Poin
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
-                    Reward Value (Nominal)
+                    Nilai Reward (Safety Credits)
                   </label>
                   <input
                     type="number"
@@ -782,8 +769,11 @@ function CorporateDashboard() {
                     placeholder="e.g. 50000"
                     className="mt-1 block w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                   />
+                  <p className="mt-1 text-xs text-slate-400">
+                    Jumlah Safety Credits (Poin) yang akan diberikan kepada warga per laporan tugas yang disetujui.
+                  </p>
                   {errors.rewardValue && (
-                    <p className="mt-1 text-xs text-red-600">{errors.rewardValue}</p>
+                    <p className="mt-1 text-xs text-red-650">{errors.rewardValue}</p>
                   )}
                 </div>
 

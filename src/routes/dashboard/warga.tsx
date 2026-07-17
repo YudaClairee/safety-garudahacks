@@ -628,7 +628,7 @@ function WargaRoute() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-900 truncate">{task.category}</p>
                         <div className="mt-1 inline-flex max-w-full items-center rounded-full bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-                          🎁 Benefit: {task.rewardType || 'Menunggu program CSR'}{task.rewardValue ? ` (Rp ${task.rewardValue.toLocaleString('id-ID')})` : ''}
+                          🎁 Benefit: {task.rewardType || 'Menunggu program CSR'}{task.rewardValue ? ` (${task.rewardType?.toLowerCase().includes('poin') || task.rewardType?.toLowerCase().includes('credit') ? '' : 'Rp '}${task.rewardValue.toLocaleString('id-ID')}${task.rewardType?.toLowerCase().includes('poin') || task.rewardType?.toLowerCase().includes('credit') ? ' Poin' : ''})` : ''}
                         </div>
                         <p className="text-[11px] text-slate-500 mt-1">
                           Didanai langsung oleh {task.companyName || 'program CSR'} via Program CSR
